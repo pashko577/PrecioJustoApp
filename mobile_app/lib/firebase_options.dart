@@ -57,18 +57,18 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAu2f5uyilaINtdiPRB4I4hXx1u9mOvM-k',
-    appId: '1:113849897645:android:48052680a3ba2b8e86ac24',
+    appId: '1:113849897645:android:09a1132544a8b02486ac24',
     messagingSenderId: '113849897645',
     projectId: 'precio-justo-pe',
     storageBucket: 'precio-justo-pe.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBKpjpC5kh3FkHpDXYb-mWCrjj1Lj1kYL8',
-    appId: '1:113849897645:ios:0efff560f469822f86ac24',
+    apiKey: 'AIzaSyB1C70azn-a1F4gM2tYs4cGesVNACqlx4s',
+    appId: '1:113849897645:ios:68c8917f0b156e1186ac24',
     messagingSenderId: '113849897645',
     projectId: 'precio-justo-pe',
     storageBucket: 'precio-justo-pe.firebasestorage.app',
-    iosBundleId: 'com.preciojusto.precioJusto',
+    iosBundleId: 'pe.compramejor.app',
   );
 }
