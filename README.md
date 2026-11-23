@@ -113,6 +113,37 @@ flutter run --dart-define=USE_EMULATORS=false   # con el celular conectado por U
 
 Al iniciar sesión, la app pide permiso de notificaciones y registra el celular. La versión web todavía no recibe push (requiere clave VAPID y service worker).
 
+## Administración
+
+Todos los scripts usan el emulador por defecto; producción con `--prod --yes` (ver más abajo).
+
+```powershell
+cd scraping-engine
+.venv\Scripts\python -m app.admin.status                                # estado de tiendas y pendientes
+.venv\Scripts\python -m app.admin.review_matches list                   # asociaciones por revisar
+.venv\Scripts\python -m app.admin.review_matches approve COOLBOX__123   # o assign / reject / create
+.venv\Scripts\python -m app.admin.set_role correo@ejemplo.com admin     # requiere FIREBASE_AUTH_EMULATOR_HOST en el emulador
+```
+
+### Respaldo semanal
+
+El workflow **Respaldo semanal** exporta Firestore cada domingo (artefacto por 30 días).
+
+- Sin el secret `BACKUP_PASSPHRASE` respalda **solo el catálogo** (sin datos personales).
+- Con `BACKUP_PASSPHRASE` (una frase larga que solo tú conozcas) respalda **todo, cifrado**. Para descifrar:
+
+```bash
+openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in respaldo.tar.gz.enc -out respaldo.tar.gz
+tar -xzf respaldo.tar.gz
+python -m app.backup.restore respaldo/precio-justo-XXXX.jsonl.gz        # verificar en el emulador
+```
+
+### Pruebas de integración
+
+```bash
+firebase emulators:exec --only firestore,auth --project demo-precio-justo "cd scraping-engine && python -m pytest -q tests_emulator"
+```
+
 ## Administración del catálogo
 
 Los scripts escriben en el **emulador** por defecto (requiere `FIRESTORE_EMULATOR_HOST`):

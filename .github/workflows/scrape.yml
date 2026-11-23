@@ -88,3 +88,33 @@ jobs:
           ARGS=""
           if [ -n "$MAX_PAGES" ]; then ARGS="-a max_pages=$MAX_PAGES"; fi
           scrapy crawl ${{ matrix.spider }} $ARGS -L INFO
+
+  status:
+    name: Estado del sistema
+    needs: scrape
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v5
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+      - uses: actions/setup-python@v6
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scraping-engine/requirements.txt
+      - name: Resumen
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        working-directory: scraping-engine
+        run: |
+          pip install -r requirements.txt
+          set +e
+          python -m app.admin.status --markdown --prod --yes > estado.md
+          code=$?
+          cat estado.md >> "$GITHUB_STEP_SUMMARY"
+          if [ $code -eq 2 ]; then echo "::warning::Hay tiendas desactualizadas (ver resumen)."; fi
+          exit 0
+

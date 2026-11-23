@@ -350,7 +350,7 @@ Canal del MVP: **notificaciones push** (gratis), sujetas a los permisos del usua
 | RNF-07 | Registro de operaciones importantes | Colección `auditLogs` y `scrapingJobs`; logs de GitHub Actions. |
 | RNF-08 | Manejo de errores de extracción | Validadores y resumen de errores por ejecución. |
 | RNF-09 | Protección contra consultas abusivas | Reglas de seguridad, consultas paginadas con límite, sin listados masivos desde la app. |
-| RNF-10 | Respaldo periódico de información | Exportación semanal a JSON con un workflow de GitHub Actions (los respaldos administrados de Firestore requieren plan de pago). |
+| RNF-10 | Respaldo periódico de información | Exportación semanal a JSONL con el workflow `backup.yml`. Con `BACKUP_PASSPHRASE` incluye usuarios y se cifra (AES-256); sin ella respalda solo el catálogo, porque los artefactos de un repositorio público son descargables (Ley 29733). |
 | RNF-11 | Monitoreo de servicios | Historial de GitHub Actions, colección `scrapingJobs`, panel de uso de Firebase. |
 | RNF-12 | Escalabilidad de trabajadores de scraping | Un job por tienda (matriz de GitHub Actions). |
 | RNF-13 | Fecha de verificación visible | `lastCheckedAt` en cada oferta. |
@@ -633,9 +633,11 @@ Mientras no exista panel de administración, las tareas se harán con scripts en
 | `categories.py` ✅ | Cargar o actualizar el árbol de categorías (`app/data/categories.json`) |
 | `import_products.py` ✅ | Carga inicial de productos desde JSON; valida todo el archivo antes de escribir y no duplica |
 | `seed.py` ✅ | Datos de ejemplo en el emulador (categorías, catálogo de muestra y ofertas ficticias) |
-| `set_role.py` | Asignar rol `admin` u `operator` (custom claims de Firebase Auth) |
+| `set_role.py` ✅ | Asignar o quitar rol `admin` u `operator` (custom claims de Firebase Auth); queda en auditLogs |
 | `stores.py` ✅ | Registrar tiendas y su evaluación (`app/data/stores.json`). **Se niega a activar una tienda sin evaluación registrada** (7.7) |
-| `review_matches.py` | Listar publicaciones `PENDING_REVIEW` y aprobarlas, rechazarlas o asociarlas a un producto |
+| `review_matches.py` ✅ | `list`, `approve`, `assign`, `reject`, `create`: revisa asociaciones, recalcula precios y registra en auditLogs |
+| `status.py` ✅ | Estado de tiendas (al día / desactualizada / nunca corrió), pendientes y productos; resumen en cada ejecución de scraping |
+| `app/backup/export.py` + `restore.py` ✅ | Respaldo JSONL comprimido (semanal en GitHub Actions) y restauración verificable en el emulador |
 
 Los scripts escriben en el **emulador** por defecto. Para el proyecto real exigen `--prod --yes` y credenciales (`GOOGLE_APPLICATION_CREDENTIALS` con un archivo **fuera** del repositorio, o `FIREBASE_SERVICE_ACCOUNT`). Rechazan `--prod` si detectan el emulador.
 
@@ -1319,7 +1321,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | ✅ Gráfico escalonado por tienda, cifras de 30/90 días (promedio ponderado por tiempo) y tabla de datos |
 | 7 | Seguimiento | Favoritos, listas y alertas | ✅ Favoritos (con cambio de precio desde que se guardó), listas, alertas (una por producto, "¡Ya cumple!") y límites del plan gratuito |
 | 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | ✅ Evaluación RN-08 tras cada corrida, bandeja con no leídas y push FCM (Android/iOS; web pendiente) |
-| 9 | Administración | Scripts de administración, revisión de coincidencias, respaldo semanal, segunda tienda | |
+| 9 | Administración | Scripts de administración, revisión de coincidencias, respaldo semanal, segunda tienda | ✅ Roles, revisión de asociaciones, estado del sistema, respaldo semanal cifrado y pruebas de integración en CI |
 | 10 | Calidad y lanzamiento | Pruebas de reglas, política de privacidad, build de producción, publicación en Google Play | |
 
 ---
