@@ -24,7 +24,7 @@ jobs:
       JOB_TYPE: ${{ github.event_name == 'schedule' && 'SCHEDULED' || 'MANUAL' }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
