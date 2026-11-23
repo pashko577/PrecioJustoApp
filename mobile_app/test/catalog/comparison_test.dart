@@ -57,8 +57,10 @@ void main() {
   testWidgets('encabezado muestra mejor precio, tiendas y ahorro', (tester) async {
     final c = compareOffers([offer('Coolbox', 25990), offer('Plaza Vea', 23990)], fresh);
     await pump(tester, ComparisonHeader(comparison: c, totalOffers: 2));
-    expect(find.text('S/ 239.90 en Plaza Vea'), findsOneWidget);
-    expect(find.text('Comparado en 2 tiendas · ahorras hasta S/ 20.00'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const Key('best-price'))).data, 'S/ 239.90');
+    expect(find.text('en Plaza Vea'), findsOneWidget);
+    expect(find.text('Comparado en 2 tiendas'), findsOneWidget);
+    expect(find.text('Ahorras hasta S/ 20.00 frente a Coolbox'), findsOneWidget);
   });
 
   testWidgets('encabezado sin precios verificados', (tester) async {

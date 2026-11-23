@@ -7,7 +7,11 @@ import '../../models/models.dart';
 import '../../models/tracking.dart';
 import '../../services/catalog_repository.dart';
 import '../../services/tracking_repository.dart';
+import '../../app/shell.dart';
+import '../../app/theme.dart';
+import '../../ui/common.dart';
 import '../catalog/product_row.dart';
+import '../notifications/notifications.dart';
 import 'tracking_actions.dart';
 
 /// Mejor precio verificado actual de un producto (`null` si no hay o está vencido).
@@ -46,22 +50,74 @@ class _Empty extends StatelessWidget {
   final String body;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 56, color: Theme.of(context).hintColor),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
+  Widget build(BuildContext context) =>
+      EmptyState(icon: icon, title: title, body: body);
+}
+
+/// Tarjeta de un producto seguido: foto, nombre, precio y detalle (cambio de precio, alerta).
+class _TrackedCard extends StatelessWidget {
+  const _TrackedCard({
+    required this.imageUrl,
+    required this.title,
+    required this.lines,
+    required this.onTap,
+    this.trailing,
+    this.onLongPress,
+  });
+
+  final String? imageUrl;
+  final String title;
+  final List<Widget> lines;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
+    child: Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: ProductImage(url: imageUrl, padding: 6),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...lines,
+                  ],
+                ),
+              ),
+              ?trailing,
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(body, textAlign: TextAlign.center),
-        ],
+        ),
       ),
     ),
   );
@@ -77,8 +133,12 @@ class FavoritesScreen extends StatelessWidget {
     length: 2,
     child: Scaffold(
       appBar: AppBar(
-        title: const Text('Mis productos'),
+        automaticallyImplyLeading: false,
+        title: const Text('Guardados'),
         bottom: const TabBar(
+          labelColor: AppColors.ink,
+          indicatorColor: AppColors.magenta,
+          dividerColor: AppColors.line,
           tabs: [
             Tab(text: 'Favoritos'),
             Tab(text: 'Listas'),
@@ -107,9 +167,12 @@ class _FavoritesTab extends ConsumerWidget {
                   body:
                       'Toca "Guardar" en un producto para seguir su precio desde aquí.',
                 )
-              : ListView.separated(
+              : ListView.builder(
+                  padding: const EdgeInsets.only(
+                    top: 8,
+                    bottom: navBarClearance,
+                  ),
                   itemCount: items.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (_, i) => _FavoriteRow(favorite: items[i]),
                 ),
         );
@@ -126,33 +189,35 @@ class _FavoriteRow extends ConsumerWidget {
     final product = ref.watch(productProvider(favorite.productId)).value;
     final current = currentBestCents(ref, product);
     final change = priceChangeText(favorite.priceAtSaveCents, current);
-    final theme = Theme.of(context);
-    return ListTile(
-      title: Text(
-        product?.name ?? favorite.productName,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            current == null
-                ? 'Sin precio verificado ahora'
-                : 'Mejor precio: ${formatCents(current)}',
+    final dropped = change != null && change.startsWith('Bajó');
+    return _TrackedCard(
+      imageUrl: product?.imageUrl,
+      title: product?.name ?? favorite.productName,
+      lines: [
+        Text(
+          current == null
+              ? 'Sin precio verificado ahora'
+              : 'Mejor precio: ${formatCents(current)}',
+          style: TextStyle(
+            fontSize: current == null ? 12 : 15,
+            fontWeight: FontWeight.w700,
+            color: current == null ? AppColors.amberInk : AppColors.ink,
+            fontFeatures: tabularFigures,
           ),
-          if (change != null)
-            Text(
-              change,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+        ),
+        if (change != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Pill(
+              label: change,
+              background: dropped ? AppColors.mint : AppColors.pink,
+              foreground: dropped ? AppColors.tealInk : AppColors.magentaInk,
             ),
-        ],
-      ),
+          ),
+      ],
       trailing: IconButton(
         tooltip: 'Quitar de favoritos',
-        icon: const Icon(Icons.favorite),
+        icon: const Icon(Icons.favorite, color: AppColors.magenta),
         onPressed: () => ref
             .read(trackingRepositoryProvider)
             ?.removeFavorite(favorite.productId),
@@ -169,20 +234,25 @@ class _WishlistsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lists = ref.watch(wishlistsProvider);
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('new-list'),
-        icon: const Icon(Icons.add),
-        label: const Text('Nueva lista'),
-        onPressed: () async {
-          final messenger = ScaffoldMessenger.of(context);
-          final name = await askName(context, title: 'Nueva lista');
-          if (name == null) return;
-          try {
-            await ref.read(trackingRepositoryProvider)!.createWishlist(name);
-          } on TrackingFailure catch (e) {
-            messenger.showSnackBar(SnackBar(content: Text(e.message)));
-          }
-        },
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: navBarClearance - 16),
+        child: FloatingActionButton.extended(
+          backgroundColor: AppColors.blue,
+          foregroundColor: Colors.white,
+          key: const Key('new-list'),
+          icon: const Icon(Icons.add),
+          label: const Text('Nueva lista'),
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final name = await askName(context, title: 'Nueva lista');
+            if (name == null) return;
+            try {
+              await ref.read(trackingRepositoryProvider)!.createWishlist(name);
+            } on TrackingFailure catch (e) {
+              messenger.showSnackBar(SnackBar(content: Text(e.message)));
+            }
+          },
+        ),
       ),
       body: lists.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -195,7 +265,10 @@ class _WishlistsTab extends ConsumerWidget {
                     'Agrupa productos que piensas comprar juntos, por ejemplo "Cocina nueva".',
               )
             : ListView.separated(
-                padding: const EdgeInsets.only(bottom: 88),
+                padding: const EdgeInsets.only(
+                  top: 8,
+                  bottom: navBarClearance + 72,
+                ),
                 itemCount: items.length,
                 separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (_, i) => ListTile(
@@ -313,7 +386,11 @@ class AlertsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis alertas')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Alertas'),
+        actions: const [NotificationsBell(), SizedBox(width: 8)],
+      ),
       body: ref
           .watch(alertsProvider)
           .when(
@@ -326,9 +403,12 @@ class AlertsScreen extends ConsumerWidget {
                     body:
                         'En un producto, toca "Crear alerta" y te avisaremos cuando baje al precio que quieres.',
                   )
-                : ListView.separated(
+                : ListView.builder(
+                    padding: const EdgeInsets.only(
+                      top: 8,
+                      bottom: navBarClearance,
+                    ),
                     itemCount: items.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (_, i) => _AlertRow(alert: items[i]),
                   ),
           ),
@@ -349,52 +429,44 @@ class _AlertRow extends ConsumerWidget {
     final paused = alert.status == AlertStatus.paused;
     final theme = Theme.of(context);
 
-    return ListTile(
-      title: Text(
-        product?.name ?? alert.productName,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Avisar si baja a ${formatCents(alert.targetPriceCents)} o menos',
+    final small = theme.textTheme.bodySmall;
+    return _TrackedCard(
+      imageUrl: product?.imageUrl,
+      title: product?.name ?? alert.productName,
+      lines: [
+        Text(
+          'Avisar si baja a ${formatCents(alert.targetPriceCents)} o menos',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.amberInk,
           ),
-          Text(
-            current == null
-                ? 'Sin precio verificado ahora'
-                : 'Mejor precio actual: ${formatCents(current)}',
+        ),
+        Text(
+          current == null
+              ? 'Sin precio verificado ahora'
+              : 'Mejor precio actual: ${formatCents(current)}',
+          style: small,
+        ),
+        if (met && !paused)
+          const Padding(
+            key: Key('alert-met'),
+            padding: EdgeInsets.only(top: 4),
+            child: Pill(
+              label: '¡Ya cumple!',
+              background: AppColors.mint,
+              foreground: AppColors.tealInk,
+              icon: Icons.check_circle,
+            ),
           ),
-          if (met && !paused)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '¡Ya cumple!',
-                  key: const Key('alert-met'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          if (paused) Text('Pausada', style: theme.textTheme.bodySmall),
-          if (alert.lastTriggeredAt != null &&
-              alert.lastTriggeredPriceCents != null)
-            Text(
-              'Te avisamos el ${_shortDate(alert.lastTriggeredAt!)} a ${formatCents(alert.lastTriggeredPriceCents!)}',
-              style: theme.textTheme.bodySmall,
-            ),
-        ],
-      ),
-      isThreeLine: true,
+        if (paused) Text('Pausada', style: small),
+        if (alert.lastTriggeredAt != null &&
+            alert.lastTriggeredPriceCents != null)
+          Text(
+            'Te avisamos el ${_shortDate(alert.lastTriggeredAt!)} a ${formatCents(alert.lastTriggeredPriceCents!)}',
+            style: small,
+          ),
+      ],
       trailing: Switch(
         value: !paused,
         onChanged: (on) =>

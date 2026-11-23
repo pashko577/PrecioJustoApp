@@ -74,8 +74,15 @@ void main() {
     });
 
     test('visitante en ruta protegida va al login recordando el destino', () {
-      expect(go('/profile', loggedIn: false), '/login?from=%2Fprofile');
+      expect(go('/notifications', loggedIn: false), '/login?from=%2Fnotifications');
       expect(go('/alerts/123', loggedIn: false), '/login?from=%2Falerts%2F123');
+      expect(go('/favorites/list/abc', loggedIn: false), '/login?from=%2Ffavorites%2Flist%2Fabc');
+    });
+
+    test('las pestañas con sesión se abren y muestran la invitación a ingresar', () {
+      expect(go('/profile', loggedIn: false), isNull);
+      expect(go('/favorites', loggedIn: false), isNull);
+      expect(go('/alerts', loggedIn: false), isNull);
     });
 
     test('con sesión, el login redirige al destino original', () {

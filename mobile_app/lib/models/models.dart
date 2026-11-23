@@ -4,7 +4,13 @@ DateTime? _date(Object? value) => value is Timestamp ? value.toDate() : null;
 int? _int(Object? value) => value is num ? value.toInt() : null;
 
 class Category {
-  const Category({required this.slug, required this.name, this.parentSlug, this.order = 0, this.icon});
+  const Category({
+    required this.slug,
+    required this.name,
+    this.parentSlug,
+    this.order = 0,
+    this.icon,
+  });
 
   final String slug;
   final String name;
@@ -105,7 +111,9 @@ class Product {
       model: d['model'] as String?,
       imageUrl: d['imageUrl'] as String?,
       description: d['description'] as String? ?? '',
-      attributes: Map<String, dynamic>.from(d['attributes'] as Map? ?? const {}),
+      attributes: Map<String, dynamic>.from(
+        d['attributes'] as Map? ?? const {},
+      ),
       identifiers: {
         for (final e in (d['identifiers'] as Map? ?? const {}).entries)
           e.key.toString(): List<String>.from(e.value as List? ?? const []),
@@ -122,11 +130,11 @@ class Product {
 enum Availability { available, outOfStock, preorder, unknown }
 
 Availability parseAvailability(String? raw) => switch (raw) {
-      'AVAILABLE' => Availability.available,
-      'OUT_OF_STOCK' => Availability.outOfStock,
-      'PREORDER' => Availability.preorder,
-      _ => Availability.unknown,
-    };
+  'AVAILABLE' => Availability.available,
+  'OUT_OF_STOCK' => Availability.outOfStock,
+  'PREORDER' => Availability.preorder,
+  _ => Availability.unknown,
+};
 
 /// Una publicación de una tienda (oferta).
 class StoreOffer {
@@ -166,20 +174,20 @@ class StoreOffer {
 
   /// Copia con otra fecha de verificación (ver `effectiveCheckedAt`).
   StoreOffer withCheckedAt(DateTime checkedAt) => StoreOffer(
-        id: id,
-        storeCode: storeCode,
-        storeName: storeName,
-        title: title,
-        productUrl: productUrl,
-        priceCents: priceCents,
-        previousPriceCents: previousPriceCents,
-        shippingCents: shippingCents,
-        availability: availability,
-        lastCheckedAt: checkedAt,
-        sellerName: sellerName,
-        currency: currency,
-        missedRuns: missedRuns,
-      );
+    id: id,
+    storeCode: storeCode,
+    storeName: storeName,
+    title: title,
+    productUrl: productUrl,
+    priceCents: priceCents,
+    previousPriceCents: previousPriceCents,
+    shippingCents: shippingCents,
+    availability: availability,
+    lastCheckedAt: checkedAt,
+    sellerName: sellerName,
+    currency: currency,
+    missedRuns: missedRuns,
+  );
 
   factory StoreOffer.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -193,7 +201,9 @@ class StoreOffer {
       previousPriceCents: _int(d['previousPriceCents']),
       shippingCents: _int(d['currentShippingCents']),
       availability: parseAvailability(d['availability'] as String?),
-      lastCheckedAt: _date(d['lastCheckedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      lastCheckedAt:
+          _date(d['lastCheckedAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       sellerName: d['sellerName'] as String?,
       currency: d['currency'] as String? ?? 'PEN',
       missedRuns: _int(d['missedRuns']) ?? 0,
@@ -203,7 +213,13 @@ class StoreOffer {
 
 /// Datos de una tienda necesarios para la vigencia (RN-01).
 class StoreInfo {
-  const StoreInfo({required this.code, this.name = '', this.freshnessMinutes = 720, this.lastCompleteRunAt});
+  const StoreInfo({
+    required this.code,
+    this.name = '',
+    this.freshnessMinutes = 720,
+    this.lastCompleteRunAt,
+    this.active = true,
+  });
 
   final String code;
   final String name;
@@ -212,6 +228,9 @@ class StoreInfo {
   /// Inicio de la última corrida completa del scraper para esta tienda.
   final DateTime? lastCompleteRunAt;
 
+  /// `false` = tienda evaluada pero que no se consulta (no se muestra como «comparada»).
+  final bool active;
+
   factory StoreInfo.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return StoreInfo(
@@ -219,6 +238,7 @@ class StoreInfo {
       name: d['name'] as String? ?? doc.id,
       freshnessMinutes: _int(d['freshnessMinutes']) ?? 720,
       lastCompleteRunAt: _date(d['lastCompleteRunAt']),
+      active: d['scrapingEnabled'] as bool? ?? true,
     );
   }
 }

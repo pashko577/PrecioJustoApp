@@ -2,10 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/theme.dart';
 import '../../core/money.dart';
 import '../../models/models.dart';
 import '../../models/tracking.dart';
 import '../../services/tracking_repository.dart';
+
+/// Sin sesión: lleva al login y luego de vuelta a [returnTo]. Devuelve `true` si redirigió.
+bool requireLogin(BuildContext context, WidgetRef ref, String returnTo) {
+  if (ref.read(trackingRepositoryProvider) != null) return false;
+  context.push(Uri(path: '/login', queryParameters: {'from': returnTo}).toString());
+  return true;
+}
+
+/// Guarda o quita un producto de favoritos (pide sesión si hace falta).
+Future<void> toggleFavorite(BuildContext context, WidgetRef ref, Product product, {int? currentBestCents}) =>
+    _run(context, () async {
+      if (requireLogin(context, ref, '/product/${product.id}')) return;
+      final repo = ref.read(trackingRepositoryProvider)!;
+      if (ref.read(isFavoriteProvider(product.id))) {
+        await repo.removeFavorite(product.id);
+      } else {
+        await repo.addFavorite(productId: product.id, productName: product.name, currentBestCents: currentBestCents);
+      }
+    });
+
+/// Abre el formulario de alerta de precio (crear o editar).
+void openAlertForm(BuildContext context, WidgetRef ref, Product product, {int? currentBestCents}) {
+  if (requireLogin(context, ref, '/product/${product.id}')) return;
+  showDialog<void>(
+    context: context,
+    builder: (_) => AlertDialogForm(
+      product: product,
+      currentBestCents: currentBestCents,
+      existing: ref.read(alertForProductProvider(product.id)),
+    ),
+  );
+}
+
+/// Abre la hoja para agregar el producto a una lista.
+void openWishlistSheet(BuildContext context, WidgetRef ref, Product product) {
+  if (requireLogin(context, ref, '/product/${product.id}')) return;
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (_) => AddToWishlistSheet(productId: product.id),
+  );
+}
 
 /// Botones de seguimiento de un producto: favorito, lista y alerta (RF-06, RF-07).
 class TrackingActions extends ConsumerWidget {
@@ -22,21 +65,8 @@ class TrackingActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.watch(trackingRepositoryProvider);
     final isFavorite = ref.watch(isFavoriteProvider(product.id));
     final alert = ref.watch(alertForProductProvider(product.id));
-
-    /// Sin sesión: al login, y de vuelta a este producto.
-    bool requireLogin() {
-      if (repo != null) return false;
-      context.push(
-        Uri(
-          path: '/login',
-          queryParameters: {'from': '/product/${product.id}'},
-        ).toString(),
-      );
-      return true;
-    }
 
     return Wrap(
       spacing: 8,
@@ -46,57 +76,62 @@ class TrackingActions extends ConsumerWidget {
           key: const Key('favorite-button'),
           icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
           label: Text(isFavorite ? 'Guardado' : 'Guardar'),
-          onPressed: () => _run(context, () async {
-            if (requireLogin()) return;
-            if (isFavorite) {
-              await repo!.removeFavorite(product.id);
-            } else {
-              await repo!.addFavorite(
-                productId: product.id,
-                productName: product.name,
-                currentBestCents: currentBestCents,
-              );
-            }
-          }),
+          onPressed: () => toggleFavorite(context, ref, product, currentBestCents: currentBestCents),
         ),
         OutlinedButton.icon(
           key: const Key('wishlist-button'),
           icon: const Icon(Icons.playlist_add),
           label: const Text('Lista'),
-          onPressed: () {
-            if (requireLogin()) return;
-            showModalBottomSheet<void>(
-              context: context,
-              showDragHandle: true,
-              builder: (_) => AddToWishlistSheet(productId: product.id),
-            );
-          },
+          onPressed: () => openWishlistSheet(context, ref, product),
         ),
         OutlinedButton.icon(
           key: const Key('alert-button'),
-          icon: Icon(
-            alert == null
-                ? Icons.notifications_none
-                : Icons.notifications_active,
-          ),
-          label: Text(
-            alert == null
-                ? 'Crear alerta'
-                : 'Alerta: ${formatCents(alert.targetPriceCents)}',
-          ),
-          onPressed: () {
-            if (requireLogin()) return;
-            showDialog<void>(
-              context: context,
-              builder: (_) => AlertDialogForm(
-                product: product,
-                currentBestCents: currentBestCents,
-                existing: alert,
-              ),
-            );
-          },
+          icon: Icon(alert == null ? Icons.notifications_none : Icons.notifications_active),
+          label: Text(alert == null ? 'Crear alerta' : 'Alerta: ${formatCents(alert.targetPriceCents)}'),
+          onPressed: () => openAlertForm(context, ref, product, currentBestCents: currentBestCents),
         ),
       ],
+    );
+  }
+}
+
+/// Corazón redondo para guardar (cards y barra del detalle).
+class FavoriteIconButton extends ConsumerWidget {
+  const FavoriteIconButton({super.key, required this.product, this.currentBestCents, this.size = 34});
+
+  final Product product;
+  final int? currentBestCents;
+  final double size;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(isFavoriteProvider(product.id));
+    return Semantics(
+      button: true,
+      toggled: on,
+      label: on ? 'Quitar de guardados' : 'Guardar',
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => toggleFavorite(context, ref, product, currentBestCents: currentBestCents),
+          child: SizedBox.square(
+            dimension: size,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
+              child: Icon(
+                on ? Icons.favorite : Icons.favorite_border,
+                key: ValueKey(on),
+                size: size * 0.53,
+                color: on ? AppColors.magenta : AppColors.ink,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

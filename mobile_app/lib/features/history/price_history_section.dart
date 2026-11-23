@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/theme.dart';
 import '../../core/money.dart';
 import '../../core/offer_rules.dart';
 import '../../core/price_history.dart';
@@ -19,11 +20,11 @@ const seriesColors = [
   Color(0xFFE87BA4), // magenta
   Color(0xFF008300), // verde
 ];
-const _surface = Color(0xFFFCFCFB);
-const _gridline = Color(0xFFE1E0D9);
-const _inkPrimary = Color(0xFF0B0B0B);
-const _inkSecondary = Color(0xFF52514E);
-const _inkMuted = Color(0xFF898781);
+const _surface = AppColors.surface;
+const _gridline = AppColors.line;
+const _inkPrimary = AppColors.ink;
+const _inkSecondary = AppColors.muted;
+const _inkMuted = Color(0xFF8A93A8);
 
 /// Colores de las tiendas presentes en un gráfico (sin repetir; ver `assignStoreColors`).
 Map<String, Color> colorsForStores(Iterable<String> storeCodes) => {
@@ -71,7 +72,7 @@ class _PriceHistorySectionState extends ConsumerState<PriceHistorySection> {
             Expanded(
               child: Text(
                 'Historial de precios',
-                style: theme.textTheme.titleMedium,
+                style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
               ),
             ),
             SegmentedButton<int>(
@@ -145,7 +146,7 @@ class _HistoryBody extends StatelessWidget {
         _DataTable(histories: withData, from: stats.from),
         const SizedBox(height: 4),
         Text(
-          'Precios observados por PRECIO JUSTO desde el ${_date(stats.firstObservation!)}. '
+          'Precios observados por CompraMejor desde el ${_date(stats.firstObservation!)}. '
           'No necesariamente incluyen todos los precios que existieron en las tiendas.',
           style: Theme.of(
             context,
@@ -191,13 +192,16 @@ class _Headline extends StatelessWidget {
     }
     return Row(
       children: [
-        Icon(icon, size: 20, color: _inkPrimary),
+        Icon(icon, size: 20, color: icon == Icons.trending_down ? AppColors.tealInk : _inkPrimary),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
             key: const Key('history-headline'),
-            style: theme.textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: icon == Icons.trending_down ? AppColors.tealInk : _inkPrimary,
+            ),
           ),
         ),
       ],
@@ -254,7 +258,7 @@ class _Tile extends StatelessWidget {
       decoration: BoxDecoration(
         color: _surface,
         border: Border.all(color: _gridline),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

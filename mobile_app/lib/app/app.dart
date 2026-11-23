@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/notifications/notifications.dart';
 import '../services/push_service.dart';
 import 'router.dart';
+import 'theme.dart';
 
 class PrecioJustoApp extends ConsumerWidget {
   const PrecioJustoApp({super.key});
@@ -13,7 +14,7 @@ class PrecioJustoApp extends ConsumerWidget {
     // Registra/desregistra el celular para push según la sesión (no hace nada en emuladores ni web).
     ref.watch(pushServiceProvider);
     return MaterialApp.router(
-      title: 'PRECIO JUSTO',
+      title: 'CompraMejor',
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
@@ -21,9 +22,3 @@ class PrecioJustoApp extends ConsumerWidget {
     );
   }
 }
-
-ThemeData buildTheme() => ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F7B5F)),
-      useMaterial3: true,
-      inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
-    );

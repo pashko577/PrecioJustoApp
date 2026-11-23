@@ -69,7 +69,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Términos y privacidad'),
         content: const Text(
-          'PRECIO JUSTO solo guarda tu correo, tu nombre y tus preferencias para prestarte el servicio '
+          'CompraMejor solo guarda tu correo, tu nombre y tus preferencias para prestarte el servicio '
           '(favoritos y alertas de precio). Los datos se alojan en servidores de Google (Firebase) fuera del Perú. '
           'Puedes eliminar tu cuenta y tus datos en cualquier momento desde tu perfil.\n\n'
           'El documento completo se publicará antes del lanzamiento.',

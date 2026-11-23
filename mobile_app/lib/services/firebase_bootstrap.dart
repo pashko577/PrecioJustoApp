@@ -37,6 +37,6 @@ Future<void> initFirebase() async {
   if (useEmulators) {
     FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, firestoreEmulatorPort);
     await FirebaseAuth.instance.useAuthEmulator(emulatorHost, authEmulatorPort);
-    debugPrint('PRECIO JUSTO: usando emuladores en $emulatorHost');
+    debugPrint('CompraMejor: usando emuladores en $emulatorHost');
   }
 }

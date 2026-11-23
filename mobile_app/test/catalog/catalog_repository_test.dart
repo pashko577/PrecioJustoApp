@@ -122,7 +122,7 @@ void main() {
       overrides: [catalogRepositoryProvider.overrideWithValue(repo)],
       child: const MaterialApp(home: SearchScreen()),
     ));
-    expect(find.text('Busca en el catálogo'), findsOneWidget);
+    expect(find.text('Lo más buscado'), findsOneWidget); // sugerencias con el buscador vacío
 
     await tester.enterText(find.byKey(const Key('search-field')), 'kingston nv3');
     await tester.pump(const Duration(milliseconds: 400)); // espera el debounce
@@ -133,7 +133,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('search-field')), 'xiaomi');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(find.text('Sin resultados para "xiaomi"'), findsOneWidget);
+    expect(find.text('No encontramos «xiaomi»'), findsOneWidget);
   });
 
   test('offers: solo asociaciones confirmadas (no las que están en revisión)', () async {
