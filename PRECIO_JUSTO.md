@@ -633,8 +633,9 @@ El detalle de cada evaluación está en `scraping-engine/app/data/stores.json`.
 | Coolbox | VTEX | ✅ Activa (6 h) | Términos sin prohibición; API pública de catálogo |
 | Plaza Vea, Oechsle, Promart | VTEX | ✅ Activas (12 h) | Términos sin prohibición de extracción |
 | Efe, La Curacao | Magento | ✅ Activas (12 h) | Términos sin prohibición; listado HTML con pausas de 6 s |
-| SercoPlus, Impacto | PrestaShop / Next.js | ⏳ Viables, sin extractor | Detrás de Cloudflare: solo si responden sin desafío (no se evade) |
-| Memory Kings | Sitio propio | ⏳ Viable, sin extractor | No publica términos |
+| SercoPlus | PrestaShop | ✅ Activa (12 h) | Responde sin desafío de Cloudflare; precio en soles publicado por la tienda junto al de dólares |
+| Memory Kings | Sitio propio | ✅ Activa (12 h) | robots.txt solo bloquea su buscador; no publica términos (revisión legal antes del lanzamiento) |
+| Impacto | Next.js | ⏸ Pendiente | Solo publica precios en dólares y su listado usa un buscador externo con una clave que no es nuestra |
 | Tottus | — | ⏸ Baja prioridad | Supermercado con poca oferta en las categorías actuales |
 | Wong | VTEX | ⏸ Pendiente | No se pudieron leer los términos |
 | Falabella, Sodimac | — | ❌ No viable | Sus términos prohíben reproducir o explotar contenidos y "compilaciones de datos" sin consentimiento escrito |
@@ -757,6 +758,8 @@ Con seis tiendas (VTEX y Magento) aparecieron dos problemas nuevos y sus solucio
 - **Posibles duplicados.** Si el código ya pertenece a **otro** producto no se fusiona nada automáticamente (RN-06): la publicación queda con `possibleDuplicateOf` y un operador decide con `review_matches duplicates` / `merge`.
 
 **Unificación (`merge`).** Mueve las publicaciones al producto conservado, une identificadores y palabras de búsqueda, migra favoritos, alertas (que se reevalúan) y listas de los usuarios, y deja el producto eliminado con `status: MERGED` y `mergedInto`. La app redirige automáticamente al producto conservado si alguien abre un enlace antiguo.
+
+**Tiendas sin códigos (SercoPlus, Memory Kings).** No publican código de fabricante ni de barras en sus listados: sus publicaciones solo se asocian por puntuación a productos que ya existen (creados por otras tiendas) y nunca crean productos. Memory Kings resume las capacidades como `16|512|16"`; el extractor las expande a `16GB 512GB 16"` para que el bloqueo por capacidad funcione. Primera prueba (Coolbox con 1 página por categoría): SSD Kingston NV3 2TB a S/ 1,121 en SercoPlus frente a S/ 1,299 en Coolbox; monitor MSI PRO MP251 a S/ 292 en Memory Kings frente a S/ 429. Las publicaciones sin pareja quedan `UNMATCHED` y aparecerán cuando otra tienda con códigos traiga ese producto.
 
 Ejemplo en el emulador: la lavadora LG WT19BVTB cuesta S/ 1,549 en Efe y La Curacao frente a S/ 2,049 en Plaza Vea y Promart.
 
@@ -1348,7 +1351,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
 | 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
 | 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | ✅ Coolbox (falta el secret de producción) |
-| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 6 tiendas (Coolbox, Plaza Vea, Oechsle, Promart con VTEX; Efe y La Curacao con Magento) y asociación entre plataformas |
+| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 8 tiendas (Coolbox, Plaza Vea, Oechsle, Promart con VTEX; Efe y La Curacao con Magento; SercoPlus con PrestaShop; Memory Kings) y asociación entre plataformas |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | ✅ Gráfico escalonado por tienda, cifras de 30/90 días (promedio ponderado por tiempo) y tabla de datos |
 | 7 | Seguimiento | Favoritos, listas y alertas | ✅ Favoritos (con cambio de precio desde que se guardó), listas, alertas (una por producto, "¡Ya cumple!") y límites del plan gratuito |
 | 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | ✅ Evaluación RN-08 tras cada corrida, bandeja con no leídas y push FCM (Android/iOS; web pendiente) |

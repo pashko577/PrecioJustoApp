@@ -21,6 +21,8 @@ from app.catalog import flatten_categories
 
 STORES_FILE = Path(__file__).resolve().parents[1] / "data" / "stores.json"
 REQUIRED_REVIEW_FIELDS = ("reviewedAt", "robotsTxt", "terms", "conclusion")
+# Plataformas cuyos extractores leen listados HTML mapeados en `categoryPaths`.
+HTML_LISTING_PLATFORMS = ("MAGENTO", "PRESTASHOP", "MEMORYKINGS")
 
 
 def load_stores(path: Path = STORES_FILE) -> list[dict]:
@@ -36,8 +38,9 @@ def load_stores(path: Path = STORES_FILE) -> list[dict]:
             raise ValueError(f"{store['code']}: categorías desconocidas {sorted(unknown)}")
         if store.get("scrapingEnabled") and store.get("platform") == "VTEX" and not store.get("vtexCategories"):
             raise ValueError(f"{store['code']}: tienda VTEX activa sin vtexCategories")
-        if store.get("scrapingEnabled") and store.get("platform") == "MAGENTO" and not store.get("categoryPaths"):
-            raise ValueError(f"{store['code']}: tienda Magento activa sin categoryPaths")
+        if (store.get("scrapingEnabled") and store.get("platform") in HTML_LISTING_PLATFORMS
+                and not store.get("categoryPaths")):
+            raise ValueError(f"{store['code']}: tienda {store['platform']} activa sin categoryPaths")
         review = store.get("review") or {}
         missing = [f for f in REQUIRED_REVIEW_FIELDS if not review.get(f)]
         if store.get("scrapingEnabled") and missing:

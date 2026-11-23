@@ -19,6 +19,12 @@ KNOWN_BRANDS = {
     "stanley": "Stanley", "tcl": "TCL", "teka": "Teka", "tecno": "Tecno", "toshiba": "Toshiba",
     "truper": "Truper", "vivo": "Vivo", "western digital": "Western Digital", "whirlpool": "Whirlpool",
     "xiaomi": "Xiaomi", "zte": "ZTE",
+    # Tiendas de cómputo (SercoPlus, Memory Kings)
+    "adata": "ADATA", "asrock": "ASRock", "benq": "BenQ", "biostar": "Biostar", "chuwi": "Chuwi",
+    "corsair": "Corsair", "hikvision": "Hikvision", "lexar": "Lexar", "logitech": "Logitech",
+    "patriot": "Patriot", "redragon": "Redragon", "sandisk": "SanDisk", "sapphire": "Sapphire",
+    "seagate": "Seagate", "teamgroup": "TeamGroup", "team group": "TeamGroup", "teros": "Teros",
+    "thelion": "Thelion", "viewsonic": "ViewSonic", "xpg": "XPG", "zotac": "Zotac",
 }
 
 

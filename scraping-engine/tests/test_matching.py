@@ -154,11 +154,13 @@ def test_different_refresh_rate_is_blocked():
 def test_enabled_spiders_and_registry_agree():
     from app.admin.stores import enabled_spiders
     from app.spiders.magento.registry import SPIDERS as MAGENTO
+    from app.spiders.memorykings.registry import SPIDERS as MEMORYKINGS
+    from app.spiders.prestashop.registry import SPIDERS as PRESTASHOP
     from app.spiders.vtex.registry import SPIDERS as VTEX
     enabled = enabled_spiders()
-    assert {"coolbox", "efe", "lacuracao"} <= set(enabled)
-    # Toda tienda activa debe tener un extractor generado (VTEX o Magento).
-    assert set(enabled) <= set(VTEX) | set(MAGENTO)
+    assert {"coolbox", "efe", "lacuracao", "sercoplus", "memorykings"} <= set(enabled)
+    # Toda tienda activa debe tener un extractor generado.
+    assert set(enabled) <= set(VTEX) | set(MAGENTO) | set(PRESTASHOP) | set(MEMORYKINGS)
 
 
 def test_store_with_unknown_category_rejected(tmp_path):
