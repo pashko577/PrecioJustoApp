@@ -215,3 +215,50 @@ def test_shared_model_code_counts_as_model_match():
     assert "ls51bpp" in model_codes(set(efe.words))
     assert score(efe, intercorp) >= 75
     assert "1tb" not in model_codes({"1tb", "180hz", "pcie4.0"})
+
+
+def test_gpu_and_cpu_family_block_laptop_variants():
+    from app.matching.scoring import cpu_families, gpus
+    assert gpus("Laptop MSI RTX4050 6GB") == gpus("Laptop MSI GeForce RTX 4050") == {"rtx 4050"}
+    assert gpus("RTX 3050 Ti") == {"rtx 3050 ti"} and gpus("Arc A380") == {"arc a380"}
+    assert cpu_families("Core i5-13420H") == {"core i5"}
+    assert cpu_families("Ryzen 5 7535HS") == {"ryzen 5"} and cpu_families("Ryzen AI 7 350") == {"ryzen 7"}
+    assert cpu_families("Intel Core Ultra 7 155H") == {"core ultra 7"}
+    victus_3050 = Candidate(product_id="v", name="Laptop gamer HP Victus 15 Core i5-13420H 16GB 512GB RTX 3050",
+                            brand="HP", model="15-fa2032la")
+    victus_4050 = Listing(title="Laptop Gamer HP Victus 15.6 Core i5-13420H 16GB 512GB SSD RTX 4050", brand="HP")
+    assert "tarjeta de video" in blocking_reason(victus_4050, victus_3050)
+    slim_r7 = Listing(title="Laptop Lenovo IdeaPad Slim 3 Ryzen 7 7730U 16GB 512GB", brand="Lenovo")
+    slim_r5 = Candidate(product_id="s", name="Laptop Lenovo IdeaPad Slim 3 Ryzen 5 7520U 16GB 512GB", brand="Lenovo")
+    assert "procesador" in blocking_reason(slim_r7, slim_r5)
+    # Un título que no menciona la tarjeta no se bloquea (no contradice, solo omite).
+    short = Listing(title="Laptop HP Victus 15 Core i5-13420H 16GB 512GB", brand="HP")
+    assert blocking_reason(short, victus_3050) is None
+
+
+def test_console_bundles_are_not_the_plain_console():
+    plain = Candidate(product_id="ps5", name="Consola PlayStation 5 Slim Digital", brand="Sony")
+    bundle = Listing(title="PlayStation 5 Slim Digital + Astro Bot + Gran Turismo 7", brand="Sony")
+    assert blocking_reason(bundle, plain) == "paquete vs. unidad"
+    # El "+" de especificaciones o marcas no es un paquete.
+    phone = Candidate(product_id="a07", name="Celular Samsung Galaxy A07 128GB 4GB", brand="Samsung")
+    assert blocking_reason(Listing(title="Smartphone SAMSUNG Galaxy A07 4GB 128GB 50MP + 2MP", brand="Samsung"),
+                           phone) is None
+    drill = Candidate(product_id="d", name="Taladro Black+Decker 600W", brand="Black+Decker")
+    assert blocking_reason(Listing(title="Taladro percutor Black+Decker 600W", brand="Black+Decker"), drill) is None
+
+
+def test_console_versions_pro_slim_digital():
+    slim_disc = Candidate(product_id="c", name="Consola PlayStation 5 Slim Lectora de Discos - Mando Blanco - FC 27",
+                          brand="Sony", mpns={"CFI2115"})
+    pro = Listing(title="Consola PlayStation 5 PRO Digital - Mando Blanco - Grand Theft Auto VI", brand="Sony",
+                  mpn="CFI2115")
+    assert "versión de consola" in blocking_reason(pro, slim_disc)
+    digital = Listing(title="Consola PS5 Slim Digital 825GB", brand="Sony")
+    assert "versión de consola" in blocking_reason(digital, slim_disc)
+    # Omitir "Slim" no contradice.
+    same = Listing(title="Consola PlayStation 5 con lectora de discos - Mando Blanco - FC 27", brand="Sony")
+    assert blocking_reason(same, slim_disc) is None
+    # Fuera de consolas no aplica ("Lenovo Legion Pro" vs. "Slim" lo deciden otras reglas).
+    assert blocking_reason(Listing(title="Laptop Lenovo Legion Pro 5", brand="Lenovo"),
+                           Candidate(product_id="l", name="Laptop Lenovo Legion Slim 5", brand="Lenovo")) is None

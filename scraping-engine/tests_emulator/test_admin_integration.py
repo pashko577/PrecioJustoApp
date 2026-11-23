@@ -154,3 +154,29 @@ def test_merge_products_and_migrate_user_tracking(db):
     assert db.document("users/ana/wishlists/l1").get().to_dict()["productIds"] == ["dup-a"]
     with pytest.raises(review.ReviewError):
         review.merge(db, "dup-a", "dup-b")  # ya unificado
+
+
+def test_recheck_moves_newly_blocked_auto_matches_to_review(db):
+    upload_categories(db, flatten_categories())
+    db.document("products/victus-3050").set({"displayName": "Laptop HP Victus 15 Core i5-13420H 16GB 512GB RTX 3050",
+                                             "brand": "HP", "categorySlug": "laptops", "status": "ACTIVE", "summary": {}})
+    base = {"storeCode": "PLAZAVEA", "status": "ACTIVE", "availability": "AVAILABLE", "currency": "PEN",
+            "lastCheckedAt": NOW, "missedRuns": 0, "productId": "victus-3050", "createdAt": NOW, "brand": "HP"}
+    db.document("storeProducts/PV__1").set({**base, "matchStatus": "MATCHED_AUTO", "currentPriceCents": 618500,
+        "title": "Laptop Gamer HP Victus 15.6 Core i5-13420H 16GB 512GB SSD RTX 4050"})
+    db.document("storeProducts/PV__2").set({**base, "matchStatus": "MATCHED_AUTO", "currentPriceCents": 379900,
+        "title": "Laptop HP Victus 15 Core i5-13420H 16GB 512GB RTX 3050"})
+    db.document("storeProducts/PV__3").set({**base, "matchStatus": "MATCHED_MANUAL", "currentPriceCents": 500000,
+        "title": "Laptop HP Victus RTX 4060"})  # decisión manual: no se toca
+
+    assert [c["id"] for c in review.recheck(db, dry_run=True)] == ["PV__1"]
+    assert db.document("storeProducts/PV__1").get().to_dict()["matchStatus"] == "MATCHED_AUTO"  # simulación
+    moved = review.recheck(db)
+    assert [c["id"] for c in moved] == ["PV__1"]
+    pv1 = db.document("storeProducts/PV__1").get().to_dict()
+    assert pv1["matchStatus"] == "PENDING_REVIEW" and pv1["productId"] == "victus-3050"
+    assert "tarjeta de video" in pv1["matchReason"]
+    assert db.document("storeProducts/PV__3").get().to_dict()["matchStatus"] == "MATCHED_MANUAL"
+    # El resumen ya no muestra el precio de la variante distinta.
+    summary = db.document("products/victus-3050").get().to_dict()["summary"]
+    assert summary["minPriceCents"] == 379900 and summary["offerCount"] == 2  # PV__2 + PV__3 manual

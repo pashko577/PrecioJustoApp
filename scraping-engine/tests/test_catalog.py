@@ -110,3 +110,18 @@ def test_summary_without_verified_offers_sorts_last():
     summary = compute_summary([("A", "1", 30000, "OUT_OF_STOCK", None, 2)])
     assert summary["minPriceCents"] is None
     assert summary["sortPriceCents"] == NO_PRICE_SORT_VALUE
+
+
+def test_summary_only_counts_confirmed_matches():
+    from datetime import datetime, timezone
+
+    from app.postprocess.summary import compute_summary as summarize
+    now = datetime.now(timezone.utc)
+    base = {"status": "ACTIVE", "availability": "AVAILABLE", "currency": "PEN", "lastCheckedAt": now, "missedRuns": 0}
+    offers = [
+        {**base, "storeCode": "A", "currentPriceCents": 30000, "matchStatus": "MATCHED_AUTO"},
+        {**base, "storeCode": "B", "currentPriceCents": 32000, "matchStatus": "MATCHED_MANUAL"},
+        {**base, "storeCode": "C", "currentPriceCents": 10000, "matchStatus": "PENDING_REVIEW"},  # sin confirmar
+    ]
+    summary = summarize(offers, {}, now=now)
+    assert summary["minPriceCents"] == 30000 and summary["offerCount"] == 2

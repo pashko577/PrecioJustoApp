@@ -670,7 +670,7 @@ Mientras no exista panel de administración, las tareas se harán con scripts en
 | `seed.py` ✅ | Datos de ejemplo en el emulador (categorías, catálogo de muestra y ofertas ficticias) |
 | `set_role.py` ✅ | Asignar o quitar rol `admin` u `operator` (custom claims de Firebase Auth); queda en auditLogs |
 | `stores.py` ✅ | Registrar tiendas y su evaluación (`app/data/stores.json`). **Se niega a activar una tienda sin evaluación registrada** (7.7) |
-| `review_matches.py` ✅ | `list`, `approve`, `assign`, `reject`, `create`: revisa asociaciones, recalcula precios y registra en auditLogs. `duplicates` y `merge`: unifica productos duplicados migrando favoritos, alertas y listas |
+| `review_matches.py` ✅ | `list`, `approve`, `assign`, `reject`, `create`: revisa asociaciones, recalcula precios y registra en auditLogs. `duplicates` y `merge`: unifica productos duplicados migrando favoritos, alertas y listas. `recheck [--dry-run]`: reaplica las reglas bloqueantes a las asociaciones automáticas |
 | `status.py` ✅ | Estado de tiendas (al día / desactualizada / nunca corrió), pendientes y productos; resumen en cada ejecución de scraping |
 | `app/backup/export.py` + `restore.py` ✅ | Respaldo JSONL comprimido (semanal en GitHub Actions) y restauración verificable en el emulador |
 
@@ -761,6 +761,12 @@ Ajustes descubiertos con datos reales de Coolbox:
 - Palabras descriptivas ("disco", "unidad", "sólido"...) no cuentan como características.
 - Las características se comparan contra el conjunto más pequeño: un título corto que **omite** datos no se castiga; uno que **contradice** datos, sí.
 - La frecuencia (Hz) y la potencia (W) bloquean igual que la capacidad: 165 Hz y 180 Hz son modelos distintos.
+- La tarjeta de video (RTX 3050 vs. RTX 4050) y la familia de procesador (Core i5 vs. i7, Ryzen 5 vs. 7) bloquean cuando ambos títulos las mencionan: la misma laptop con otra tarjeta es otro producto.
+- Un código de fabricante es **una palabra** con letras y números (`BEE-S-KB5NA`, `CFI-2115`). Los nombres comerciales del campo "Modelo" ("PlayStation 5 Slim", "Switch 2") no son códigos: los comparten paquetes y variantes distintas, y usarlos unía productos diferentes. Tampoco los códigos internos de vendedores con fecha (10+ dígitos seguidos).
+- En consolas, Pro / Slim / OLED / Lite y Digital / con lectora que se contradicen bloquean la unión (omitir "Slim" no bloquea).
+- En consolas, un título con "+ juego/accesorio" es un paquete y no se une con la consola sola (el "+" de "50MP + 2MP" o "Black+Decker" no cuenta).
+- Las publicaciones en revisión (`PENDING_REVIEW`) conservan el producto solo como sugerencia: **no** cuentan en el resumen de precios ni se muestran en la app hasta que se aprueban.
+- `review_matches recheck` vuelve a aplicar las reglas a las asociaciones automáticas existentes (el motor respeta decisiones previas, así que una regla nueva no corrige sola lo ya asociado).
 
 Resultado de la primera corrida real (Coolbox, 1 página por categoría): 251 publicaciones, **248 asociadas automáticamente (99 %)**, 3 en revisión manual (modelos realmente distintos), 0 falsos positivos detectados.
 

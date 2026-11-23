@@ -124,6 +124,12 @@ cd scraping-engine
 .venv\Scripts\python -m app.admin.review_matches approve COOLBOX__123   # o assign / reject / create
 .venv\Scripts\python -m app.admin.review_matches duplicates             # posibles duplicados entre tiendas
 .venv\Scripts\python -m app.admin.review_matches merge producto-a producto-b  # unifica b en a (migra favoritos y alertas)
+.venv\Scripts\python -m app.admin.review_matches recheck --dry-run     # qué asociaciones bloquearían las reglas nuevas
+```
+
+En producción, `recheck` se lanza desde GitHub: Actions → Scraping → Run workflow → marcar **Revisar asociaciones existentes**.
+
+```powershell
 .venv\Scripts\python -m app.admin.set_role correo@ejemplo.com admin     # requiere FIREBASE_AUTH_EMULATOR_HOST en el emulador
 ```
 

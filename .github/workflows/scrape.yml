@@ -12,6 +12,11 @@ on:
         description: "Páginas por categoría (vacío = todas)"
         required: false
         default: ""
+      recheck:
+        description: "Revisar asociaciones existentes con las reglas nuevas al terminar"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: scraping-${{ github.ref }}
@@ -106,6 +111,14 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: scraping-engine/requirements.txt
+      - name: Revisar asociaciones con las reglas nuevas
+        if: env.FIREBASE_SERVICE_ACCOUNT != '' && github.event.inputs.recheck == 'true'
+        working-directory: scraping-engine
+        run: |
+          pip install -r requirements.txt
+          python -m app.admin.review_matches recheck --prod --yes | tee recheck.txt
+          { echo "### Asociaciones enviadas a revisión"; echo '```'; head -100 recheck.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Resumen
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
         working-directory: scraping-engine

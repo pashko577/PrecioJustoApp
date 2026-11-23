@@ -82,12 +82,19 @@ def clean_title(product_name: str | None, item_name: str | None, name_complete: 
     return f"{product} - {' '.join(extra)}" if extra else product
 
 
-_MODEL_CODE_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9][A-Za-z0-9 ./_-]{2,30}$")
+# Una palabra con letras y números; sin 10+ dígitos seguidos (códigos internos de vendedores
+# con fecha, como "GameCenter-1695497308512").
+_MODEL_CODE_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?!.*\d{10})[A-Za-z0-9][A-Za-z0-9./_#-]{3,30}$")
 
 
 def looks_like_model_code(value: str | None) -> bool:
-    """¿Parece un código de modelo (letras y números) y no un correlativo interno solo numérico?"""
-    return bool(value) and bool(_MODEL_CODE_RE.match(value.strip())) and len(value.split()) <= 3
+    """¿Parece un código de fabricante: UNA palabra con letras y números, de 5+ caracteres?
+
+    Rechaza correlativos internos solo numéricos ("20329474") y nombres comerciales con espacios
+    ("PlayStation 5 Slim", "Switch 2", "Galaxy A16"): esos los comparten variantes y paquetes
+    distintos, y usarlos como código uniría productos diferentes.
+    """
+    return bool(value) and bool(_MODEL_CODE_RE.match(value.strip()))
 
 
 def pick_mpn(product: dict) -> str | None:

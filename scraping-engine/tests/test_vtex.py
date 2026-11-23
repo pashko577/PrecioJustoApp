@@ -225,3 +225,16 @@ def test_internal_sellers_are_the_store_itself():
     assert seller_name({"sellerId": "1", "sellerName": "CENCOSUD RETAIL PERU S.A."}) is None
     assert seller_name({"sellerId": "wongiononfood", "sellerName": "wongiononfood"}, ("wongio",)) is None
     assert seller_name({"sellerId": "lgperu", "sellerName": "LG Perú"}, ("wongio",)) == "LG Perú"
+
+
+def test_commercial_names_are_not_manufacturer_codes():
+    from app.spiders.vtex.base import looks_like_model_code, pick_mpn
+    # Nombres comerciales: los comparten paquetes y variantes distintas.
+    for name in ("PlayStation 5 Slim", "Switch 2", "Oled 2", "Galaxy A16", "PS5 DIGITAL BUNDLE 825GB"):
+        assert not looks_like_model_code(name), name
+    # Códigos internos de vendedores con fecha.
+    assert not looks_like_model_code("GameCenter-1695497308512")
+    # Códigos reales.
+    for code in ("BEE-S-KB5NA", "CFI-2115", "RI-795DI", "LS51BPP", "82XB003MLM", "TWVS4001063-L"):
+        assert looks_like_model_code(code), code
+    assert pick_mpn({"productReference": "526487591245", "Modelo": ["Nintendo switch 2"]}) is None

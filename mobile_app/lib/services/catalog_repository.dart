@@ -94,8 +94,15 @@ class CatalogRepository {
         .where('status', isEqualTo: 'ACTIVE')
         .limit(50)
         .get();
-    return snap.docs.map(StoreOffer.fromDoc).toList();
+    return snap.docs.where(isShownMatch).map(StoreOffer.fromDoc).toList();
   }
+
+  /// Solo asociaciones confirmadas: una publicación en revisión conserva el producto como
+  /// sugerencia y no se muestra como precio hasta que se apruebe (igual que el motor).
+  static bool isShownMatch(DocumentSnapshot<Map<String, dynamic>> doc) =>
+      shownMatchStatuses.contains(doc.data()?['matchStatus'] ?? 'MATCHED_AUTO');
+
+  static const shownMatchStatuses = {'MATCHED_AUTO', 'MATCHED_MANUAL'};
 
   /// Historial de precios de las ofertas en los últimos [days] días (RF-05).
   /// Lee un documento `history/{YYYY-MM}` por oferta y por mes, en paralelo.

@@ -9,6 +9,7 @@ Uso (emulador por defecto; producción con --prod --yes):
     python -m app.admin.review_matches create COOLBOX__123           # crea un producto nuevo
     python -m app.admin.review_matches duplicates                    # posibles duplicados detectados
     python -m app.admin.review_matches merge producto-a producto-b   # unifica b en a
+    python -m app.admin.review_matches recheck [--dry-run]           # reaplica reglas nuevas
 
 Las decisiones manuales (MATCHED_MANUAL, REJECTED) se respetan en las corridas siguientes.
 Cada acción recalcula los precios de los productos afectados y queda en auditLogs.
@@ -181,6 +182,53 @@ def merge(db, keep_id: str, remove_id: str) -> dict:
     return {"listingsMoved": moved, **migrated}
 
 
+def recheck(db, *, dry_run: bool = False) -> list[dict]:
+    """Vuelve a aplicar las reglas bloqueantes (8.3) a las asociaciones AUTOMÁTICAS existentes.
+
+    El motor respeta las decisiones previas, así que una regla nueva (por ejemplo, tarjeta de
+    video distinta) no corrige sola lo que ya se asoció. Las que ahora quedan bloqueadas pasan a
+    PENDING_REVIEW conservando el producto como sugerencia. Las manuales no se tocan.
+    """
+    from app.matching.matcher import candidate_from_doc
+    from app.matching.scoring import Listing, blocking_reason
+
+    listings = list(db.collection("storeProducts").where(filter=FieldFilter("matchStatus", "==", "MATCHED_AUTO")).stream())
+    products: dict[str, dict | None] = {}
+    changed: list[dict] = []
+    batch, pending = db.batch(), 0
+    for snap in listings:
+        data = snap.to_dict() or {}
+        pid = data.get("productId")
+        if not pid:
+            continue
+        if pid not in products:
+            psnap = db.collection("products").document(pid).get()
+            products[pid] = psnap.to_dict() if psnap.exists else None
+        if products[pid] is None:
+            continue
+        ids = data.get("identifiers") or {}
+        listing = Listing(title=data.get("title") or "", brand=data.get("brand"), model=data.get("model"),
+                          condition=data.get("condition") or "NEW", gtin=ids.get("GTIN"), mpn=ids.get("MPN"))
+        reason = blocking_reason(listing, candidate_from_doc(pid, products[pid]))
+        if not reason:
+            continue
+        changed.append({"id": snap.id, "productId": pid, "reason": reason, "title": data.get("title")})
+        if not dry_run:
+            batch.update(snap.reference, {"matchStatus": "PENDING_REVIEW",
+                                          "matchReason": f"revisión: {reason}",
+                                          "updatedAt": firestore.SERVER_TIMESTAMP})
+            pending += 1
+            if pending == 400:
+                batch.commit()
+                batch, pending = db.batch(), 0
+    if not dry_run and changed:
+        if pending:
+            batch.commit()
+        refresh_summaries(db, {c["productId"] for c in changed})
+        log_action(db, "MATCHES_RECHECKED", "storeProduct", "*", {"movedToReview": len(changed)})
+    return changed
+
+
 def _format(listing: dict) -> str:
     price = listing.get("currentPriceCents")
     price_txt = f"S/ {price / 100:,.2f}" if price else "—"
@@ -198,6 +246,7 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("approve", "reject", "create"):
         sub.add_parser(name).add_argument("listing_id")
     sub.add_parser("duplicates")
+    sub.add_parser("recheck").add_argument("--dry-run", action="store_true")
     p_merge = sub.add_parser("merge")
     p_merge.add_argument("keep_product_id")
     p_merge.add_argument("remove_product_id")
@@ -230,6 +279,12 @@ def main(argv: list[str] | None = None) -> int:
             for item in items:
                 print(f"{item['id']}\n    asociado a {item.get('productId')} · también coincide con "
                       f"{item.get('possibleDuplicateOf')}\n    {item.get('title', '')[:90]}")
+        elif args.command == "recheck":
+            items = recheck(db, dry_run=args.dry_run)
+            verb = "Se pasarían" if args.dry_run else "Pasaron"
+            print(f"{verb} {len(items)} asociaciones automáticas a revisión:\n")
+            for item in items:
+                print(f"{item['id']} -> {item['productId']}\n    {item['reason']}\n    {(item['title'] or '')[:90]}")
         elif args.command == "merge":
             result = merge(db, args.keep_product_id, args.remove_product_id)
             print(f"Unificado {args.remove_product_id} -> {args.keep_product_id}: {result}")

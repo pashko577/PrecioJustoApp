@@ -136,6 +136,22 @@ void main() {
     expect(find.text('Sin resultados para "xiaomi"'), findsOneWidget);
   });
 
+  test('offers: solo asociaciones confirmadas (no las que están en revisión)', () async {
+    Future<void> offer(String id, String status, int price) => db.collection('storeProducts').doc(id).set({
+          'productId': 'knv3-1tb',
+          'status': 'ACTIVE',
+          'storeCode': id.split('__').first,
+          'currentPriceCents': price,
+          'matchStatus': status,
+        });
+    await offer('COOLBOX__1', 'MATCHED_AUTO', 24990);
+    await offer('EFE__1', 'MATCHED_MANUAL', 25990);
+    await offer('PLAZAVEA__1', 'PENDING_REVIEW', 19990); // sugerencia sin confirmar
+    await offer('OECHSLE__1', 'REJECTED', 9990);
+    final offers = await repo.offers('knv3-1tb');
+    expect(offers.map((o) => o.id).toSet(), {'COOLBOX__1', 'EFE__1'});
+  });
+
   test('compareByPrice', () {
     const a = Product(id: 'a', name: 'A', brand: '', categorySlug: '', summary: PriceSummary(minPriceCents: 100));
     const b = Product(id: 'b', name: 'B', brand: '', categorySlug: '');

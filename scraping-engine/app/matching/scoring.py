@@ -98,6 +98,48 @@ def capacities(words: list[str]) -> set[str]:
     return {w for w in words if _CAPACITY_RE.match(w)}
 
 
+# "+ Astro Bot" (letra después del "+") en un título de consola. No: "50MP + 2MP", "Black+Decker".
+_BUNDLE_PLUS_RE = re.compile(r"(?i)^(?=.*\b(?:consola|playstation|ps5|ps4|switch|xbox|nintendo)\b).*\s\+\s*[a-z]")
+_CONSOLE_RE = re.compile(r"(?i)\b(?:consola|playstation|ps5|ps4|switch|xbox|nintendo)\b")
+_CONSOLE_DISC_WORDS = {"lectora", "disco", "discos", "standard", "estandar"}
+
+
+def console_variant(title: str) -> set[str]:
+    """Versión de una consola: Pro / Slim / OLED / Lite y Digital / con lectora."""
+    if not _CONSOLE_RE.search(title):
+        return set()
+    words = set(normalize_text(title).split())
+    variant = words & {"pro", "slim", "oled", "lite"}
+    if "digital" in words:
+        variant.add("digital")
+    elif words & _CONSOLE_DISC_WORDS:
+        variant.add("con lectora")
+    return variant
+
+
+_GPU_RE = re.compile(r"\b(rtx|gtx|rx|mx)\s?-?(\d{3,4})(\s?ti\b)?|\barc\s?([ab]\d{3})\b")
+_CPU_RES = (
+    (re.compile(r"\bi([3579])(?:[-\s]|$)"), "core i{}"),           # Core i5-13420H
+    (re.compile(r"\bryzen\s?(?:ai\s)?([3579])\b"), "ryzen {}"),    # Ryzen 5 7535HS, Ryzen AI 7
+    (re.compile(r"\bultra\s?([579])\b"), "core ultra {}"),          # Core Ultra 7 155H
+    (re.compile(r"\bcore\s([3579])\s"), "core {}"),                # Core 5 120U
+)
+
+
+def gpus(text: str) -> set[str]:
+    """Tarjetas de video mencionadas: "rtx 4050", "RTX4050" y "rtx-4050" son la misma."""
+    found = set()
+    for m in _GPU_RE.finditer(normalize_text(text)):
+        found.add(f"arc {m.group(4)}" if m.group(4) else f"{m.group(1)} {m.group(2)}{' ti' if m.group(3) else ''}")
+    return found
+
+
+def cpu_families(text: str) -> set[str]:
+    """Familias de procesador: Core i5 / i7, Ryzen 5 / 7, Core Ultra 5 / 7..."""
+    norm = f"{normalize_text(text)} "
+    return {label.format(m.group(1)) for regex, label in _CPU_RES for m in regex.finditer(norm)}
+
+
 def blocking_reason(listing: Listing, candidate: Candidate) -> str | None:
     """Regla 8.3: casos que nunca se asocian automáticamente."""
     if listing.gtin and candidate.gtins and listing.gtin not in candidate.gtins:
@@ -107,12 +149,29 @@ def blocking_reason(listing: Listing, candidate: Candidate) -> str | None:
     cap_l, cap_c = capacities(listing.words), capacities(candidate.words)
     if cap_l and cap_c and cap_l != cap_c:
         return f"capacidad distinta ({sorted(cap_l)} vs {sorted(cap_c)})"
-    pack_l, pack_c = bool(_PACK_WORDS & set(listing.words)), bool(_PACK_WORDS & set(candidate.words))
+    # "PS5 Slim + Astro Bot + GT7" es un paquete; el "+" pegado de "Black+Decker" no lo es.
+    pack_l = bool(_PACK_WORDS & set(listing.words)) or bool(_BUNDLE_PLUS_RE.search(listing.title))
+    pack_c = bool(_PACK_WORDS & set(candidate.words)) or bool(_BUNDLE_PLUS_RE.search(candidate.name))
     if pack_l != pack_c:
         return "paquete vs. unidad"
     color_l, color_c = _COLOR_WORDS & set(listing.words), _COLOR_WORDS & set(candidate.words)
     if color_l and color_c and not (color_l & color_c):
         return "color distinto"
+    # Laptops del mismo modelo con otra tarjeta de video o procesador son productos distintos
+    # (HP Victus 15 con RTX 3050 vs. RTX 4050). Solo bloquea si ambos títulos lo mencionan.
+    l_text = f"{listing.title} {listing.model or ''}"
+    c_text = f"{candidate.name} {candidate.model or ''}"
+    gpu_l, gpu_c = gpus(l_text), gpus(c_text)
+    if gpu_l and gpu_c and gpu_l != gpu_c:
+        return f"tarjeta de video distinta ({sorted(gpu_l)} vs {sorted(gpu_c)})"
+    con_l, con_c = console_variant(listing.title), console_variant(candidate.name)
+    for group in ({"pro", "slim", "oled", "lite"}, {"digital", "con lectora"}):
+        gl, gc = con_l & group, con_c & group
+        if gl and gc and gl != gc:  # contradicción (Pro vs. Slim); omitir "Slim" no bloquea
+            return f"versión de consola distinta ({sorted(gl)} vs {sorted(gc)})"
+    cpu_l, cpu_c = cpu_families(l_text), cpu_families(c_text)
+    if cpu_l and cpu_c and not (cpu_l & cpu_c):
+        return f"procesador distinto ({sorted(cpu_l)} vs {sorted(cpu_c)})"
     return None
 
 

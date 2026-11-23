@@ -13,6 +13,8 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from app.catalog import NO_PRICE_SORT_VALUE
 
 DEFAULT_FRESHNESS_MINUTES = 12 * 60
+# Estados de asociación que se muestran como precio del producto (la app usa la misma lista).
+SHOWN_MATCH_STATUSES = ("MATCHED_AUTO", "MATCHED_MANUAL")
 
 
 def effective_checked_at(offer: dict, store: dict | None) -> datetime | None:
@@ -35,7 +37,10 @@ def compute_summary(offers: list[dict], stores: dict[str, dict], now: datetime |
     Precio mínimo: solo ofertas activas, vigentes, disponibles y en PEN.
     """
     now = now or datetime.now(timezone.utc)
-    active = [o for o in offers if o.get("status", "ACTIVE") == "ACTIVE"]
+    # Solo asociaciones confirmadas: una publicación en revisión conserva el producto como
+    # SUGERENCIA y no debe aparecer como precio de ese producto hasta que alguien la apruebe.
+    active = [o for o in offers if o.get("status", "ACTIVE") == "ACTIVE"
+              and o.get("matchStatus", "MATCHED_AUTO") in SHOWN_MATCH_STATUSES]
     verified = []
     checks = []
     for o in active:

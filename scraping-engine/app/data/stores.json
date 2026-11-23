@@ -22,7 +22,8 @@
       "/171/538/": "monitores",
       "/47/258/259/": "ssd",
       "/48/165/": "discos-externos",
-      "/20/21/": "celulares"
+      "/20/21/": "celulares",
+      "/171/867/": "consolas"
     },
     "vtexCategoryNames": {
       "/47/65/": "Cómputo > Laptops",
@@ -31,7 +32,8 @@
       "/171/538/": "Gamer > Monitores Gamer",
       "/47/258/259/": "Cómputo > Componentes > Discos Internos y SSD",
       "/48/165/": "Almacenamiento > Discos externos",
-      "/20/21/": "Celulares y Accesorios > Celulares"
+      "/20/21/": "Celulares y Accesorios > Celulares",
+      "/171/867/": "Gamer > Consolas"
     }
   },
   {
@@ -57,7 +59,9 @@
       "/679/693/756/": "refrigeradoras",
       "/679/691/750/": "lavadoras",
       "/679/694/753/": "microondas",
-      "/679/688/1460/": "herramientas"
+      "/679/688/1460/": "herramientas",
+      "/678/689/1753/": "consolas",
+      "/678/689/1749/": "consolas"
     },
     "vtexCategoryNames": {
       "/678/683/766/": "Tecnología > Cómputo > Laptops",
@@ -66,7 +70,9 @@
       "/679/693/756/": "Electrohogar > Refrigeración > Refrigeradoras",
       "/679/691/750/": "Electrohogar > Lavado > Lavadoras",
       "/679/694/753/": "Electrohogar > Electrodomésticos de Cocina > Hornos Microondas",
-      "/679/688/1460/": "Electrohogar > Herramientas Eléctricas > Taladros"
+      "/679/688/1460/": "Electrohogar > Herramientas Eléctricas > Taladros",
+      "/678/689/1753/": "Tecnología > Videojuegos > Consola Nintendo Switch",
+      "/678/689/1749/": "Tecnología > Videojuegos > Ps5"
     }
   },
   {
@@ -92,7 +98,9 @@
       "/161/201/329/": "refrigeradoras",
       "/161/332/200/": "lavadoras",
       "/161/198/187/": "microondas",
-      "/161/1222467/1222629/": "herramientas"
+      "/161/1222467/1222629/": "herramientas",
+      "/160/172/569/": "consolas",
+      "/160/172/2745754/": "consolas"
     },
     "vtexCategoryNames": {
       "/160/168/209/": "Tecnología > Cómputo > Laptops",
@@ -101,7 +109,9 @@
       "/161/201/329/": "Electrohogar > Refrigeración > Refrigeradoras",
       "/161/332/200/": "Electrohogar > Lavado > Lavadoras",
       "/161/198/187/": "Electrohogar > Cocina > Hornos Microondas",
-      "/161/1222467/1222629/": "Electrohogar > Herramientas Eléctricas > Taladros"
+      "/161/1222467/1222629/": "Electrohogar > Herramientas Eléctricas > Taladros",
+      "/160/172/569/": "Tecnología > Videojuegos > Consolas Nintendo Switch",
+      "/160/172/2745754/": "Tecnología > Videojuegos > PS5"
     }
   },
   {
@@ -126,7 +136,8 @@
       "/804/805/807/": "celulares",
       "/599/603/814/": "refrigeradoras",
       "/599/604/622/": "lavadoras",
-      "/17/228/281/": "herramientas"
+      "/17/228/281/": "herramientas",
+      "/804/832/833/": "consolas"
     },
     "vtexCategoryNames": {
       "/804/837/844/": "Tecnología > Cómputo > Laptops",
@@ -134,7 +145,8 @@
       "/804/805/807/": "Tecnología > Telefonía > Celulares y smartphones",
       "/599/603/814/": "Electrohogar > Refrigeración > Refrigeradoras",
       "/599/604/622/": "Electrohogar > Lavado y secado > Lavadoras",
-      "/17/228/281/": "Herramientas > Herramientas eléctricas portátiles > Taladros"
+      "/17/228/281/": "Herramientas > Herramientas eléctricas portátiles > Taladros",
+      "/804/832/833/": "Tecnología > Videojuegos > Consolas"
     }
   },
   {
@@ -482,7 +494,9 @@
       "/100000000/102000000/102050000/": "monitores",
       "/200000000/202000000/202020000/202020600/": "refrigeradoras",
       "/200000000/202000000/202030000/202030100/": "lavadoras",
-      "/200000000/201000000/201110000/": "microondas"
+      "/200000000/201000000/201110000/": "microondas",
+      "/100000000/108000000/108010000/108010300/": "consolas",
+      "/100000000/108000000/108020000/108020300/": "consolas"
     },
     "vtexCategoryNames": {
       "/100000000/102000000/102040000/": "Tecnología > Computadoras > Laptops",
@@ -490,7 +504,9 @@
       "/100000000/102000000/102050000/": "Tecnología > Computadoras > Monitores",
       "/200000000/202000000/202020000/202020600/": "Electrohogar > Línea blanca > Refrigeración > Refrigerador",
       "/200000000/202000000/202030000/202030100/": "Electrohogar > Línea blanca > Lavado > Lavadoras",
-      "/200000000/201000000/201110000/": "Electrohogar > Electrodomésticos de cocina > Microondas"
+      "/200000000/201000000/201110000/": "Electrohogar > Electrodomésticos de cocina > Microondas",
+      "/100000000/108000000/108010000/108010300/": "Tecnología > Videojuegos > Nintendo > Consolas Nintendo",
+      "/100000000/108000000/108020000/108020300/": "Tecnología > Videojuegos > PlayStation > Consolas PlayStation"
     }
   },
   {
