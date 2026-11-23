@@ -26,3 +26,6 @@ emulator-data/
 Thumbs.db
 .vscode/
 .idea/
+
+# Maqueta
+design-prototype/dist/
