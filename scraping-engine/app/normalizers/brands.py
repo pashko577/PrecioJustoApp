@@ -25,6 +25,9 @@ KNOWN_BRANDS = {
     "patriot": "Patriot", "redragon": "Redragon", "sandisk": "SanDisk", "sapphire": "Sapphire",
     "seagate": "Seagate", "teamgroup": "TeamGroup", "team group": "TeamGroup", "teros": "Teros",
     "thelion": "Thelion", "viewsonic": "ViewSonic", "xpg": "XPG", "zotac": "Zotac",
+    # Videojuegos (Phantom)
+    "nintendo": "Nintendo", "playstation": "Sony", "xbox": "Microsoft", "razer": "Razer",
+    "hyperx": "HyperX", "steelseries": "SteelSeries", "8bitdo": "8BitDo",
 }
 
 

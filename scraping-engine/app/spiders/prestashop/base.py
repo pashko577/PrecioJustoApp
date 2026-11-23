@@ -5,9 +5,10 @@ Lee los listados de categoría (HTML generado en el servidor). Cada producto es 
 dólares con su equivalente en soles calculado por la propia tienda: "$ 860,80 (S/ 3.030,02)".
 Se toma el precio en soles (la app compara en PEN, RN-04); sin precio en soles se omite.
 
-No publica código de fabricante ni código de barras en el listado (el `itemprop="mpn"` es un
-valor de relleno): estas publicaciones se asocian por puntuación a productos existentes y no
-crean productos nuevos.
+SercoPlus no publica código de fabricante ni de barras en el listado (el `itemprop="mpn"` es
+un valor de relleno): sus publicaciones se asocian por puntuación y no crean productos.
+Infotec (otro tema PrestaShop) publica precio "S/. 1579", marca y el número de parte entre
+paréntesis al final del título, que se usa como MPN solo si viene completo.
 """
 
 from __future__ import annotations
@@ -18,14 +19,24 @@ from datetime import datetime, timezone
 
 from app.models.offer import ScrapedOffer
 from app.normalizers.brands import detect_brand
+from app.normalizers.identifiers import canonical_mpn
 from app.normalizers.price import parse_price_to_cents
 from app.spiders.listing_base import REFURBISHED_RE, ListingSpider
+from app.spiders.vtex.base import looks_like_model_code
 
 _ARTICLE_RE = re.compile(r'<article[^>]*data-id-product="(\d+)"')
-_TITLE_RE = re.compile(r'class="[^"]*product-title[^"]*">\s*<a href="([^"]+)"[^>]*>\s*<h\d[^>]*>([^<]+)</h\d>')
-_PRICE_RE = re.compile(r'<span class="price"[^>]*>([^<]*)</span>')
-_REGULAR_RE = re.compile(r'<span class="regular-price"[^>]*>([^<]*)</span>')
-_SOLES_RE = re.compile(r"S/[\s\xa0]*([\d.,]+)")
+# Dos temas: SercoPlus "<div class=product-title><a><h6>Título</h6></a>" e
+# Infotec "<h2 class=product-title><a>Título</a></h2>".
+_TITLE_RE = re.compile(r'class="[^"]*product-title[^"]*">\s*<a href="([^"]+)"[^>]*>\s*(?:<h\d[^>]*>)?([^<]+)<')
+_PRICE_RE = re.compile(r'<span\s+class="(?:price|product-price)"[^>]*>([^<]*)</span>')
+_REGULAR_RE = re.compile(r'<span\s+class="regular-price[^"]*"[^>]*>([^<]*)</span>')
+_SOLES_RE = re.compile(r"S/\.?[\s\xa0]*(\d[\d.,]*)")
+_BRAND_RE = re.compile(r'class="product-brand[^"]*">\s*(?:<a[^>]*>)?\s*([^<]+?)\s*<')
+# Número de parte entre paréntesis al final del título de Infotec: "... FREEDOS (82XB003MLM)".
+# El campo "Modelo" de su descripción NO sirve: trae la serie ("V15"), compartida por variantes
+# con distinta RAM o disco, y unirlas por ese código sería una asociación errónea.
+_PART_RE = re.compile(r"\(([A-Za-z0-9][A-Za-z0-9#/._-]{5,24})\)\s*$")
+_ADD_TO_CART_RE = re.compile(r'<button[^>]*data-button-action="add-to-cart"[^>]*>')
 _STOCK_RE = re.compile(r'Stock:\s*</label>\s*<span class="value">([^<]*)</span>')
 _TOTAL_RE = re.compile(r"Mostrando\s+\d+-\d+\s+de\s+(\d+)")
 
@@ -39,6 +50,14 @@ def soles_cents(text: str | None) -> int | None:
         return parse_price_to_cents(match.group(1))
     except ValueError:
         return None
+
+
+def part_number(title: str) -> str | None:
+    """Número de parte completo entre paréntesis al final del título (None si viene recortado)."""
+    match = _PART_RE.search(title)
+    if not match or not looks_like_model_code(match.group(1)):
+        return None
+    return match.group(1)
 
 
 def availability_from_stock(stock: str | None) -> str:
@@ -70,7 +89,7 @@ def parse_listing(page_html: str, *, store_code: str, category_slug: str | None,
             warnings.append(f"{product_id}: sin título")
             continue
         url = html_lib.unescape(title_match.group(1))
-        title = re.sub(r"\s+", " ", html_lib.unescape(title_match.group(2))).strip()
+        title = re.sub(r"\s+", " ", html_lib.unescape(title_match.group(2))).strip().rstrip(".( ").strip()
         price_cents = next((c for c in map(soles_cents, _PRICE_RE.findall(chunk)) if c), None)
         if price_cents is None:
             warnings.append(f"{title[:40]}: sin precio en soles")
@@ -78,19 +97,26 @@ def parse_listing(page_html: str, *, store_code: str, category_slug: str | None,
         regular = _REGULAR_RE.search(chunk)
         list_cents = soles_cents(regular.group(1)) if regular else None
         stock = _STOCK_RE.search(chunk)
+        brand_match = _BRAND_RE.search(chunk)
+        model = part_number(title)
+        if stock:
+            availability = availability_from_stock(stock.group(1))
+        else:  # sin etiqueta de stock (Infotec): el botón de compra activo indica disponibilidad
+            button = _ADD_TO_CART_RE.search(chunk)
+            availability = "UNKNOWN" if not button else ("OUT_OF_STOCK" if "disabled" in button.group(0) else "AVAILABLE")
         offers.append(ScrapedOffer(
             store_code=store_code,
             external_product_id=product_id,
             title=title,
-            brand=detect_brand(title),
-            model=None,
+            brand=(html_lib.unescape(brand_match.group(1)).strip() if brand_match else None) or detect_brand(title),
+            model=model,
             price_cents=price_cents,
             list_price_cents=list_cents if list_cents and list_cents > price_cents else None,
             shipping_cents=None,
-            availability=availability_from_stock(stock.group(1) if stock else None),
+            availability=availability,
             condition="REFURBISHED" if REFURBISHED_RE.search(title) else "NEW",
             seller=None,
-            identifiers={},
+            identifiers={"MPN": canonical_mpn(model)} if canonical_mpn(model) else {},
             category_hint=category_slug,
             product_url=url,
             image_url=None,

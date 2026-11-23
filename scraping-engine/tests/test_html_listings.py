@@ -172,3 +172,55 @@ def test_registries_from_stores_json():
     assert all(path.startswith("/listados/") for path in mk.categories)
     assert not any("resultados" in path for path in mk.categories)  # bloqueado por robots.txt
     assert mk.custom_settings["DOWNLOAD_DELAY"] >= 5
+
+
+# ---------- Infotec (otro tema PrestaShop) ----------
+
+def infotec_card(pid, title, price, regular=None, disabled=False):
+    regular_html = f'<span class="regular-price text-muted">{regular}</span>' if regular else ""
+    dis = " disabled" if disabled else ""
+    return f'''
+<article class="product-miniature js-product-miniature" data-id-product="{pid}" data-id-product-attribute="0" >
+ <div class="product-description"><h2 class="h3 product-title"> <a href="https://infotec.example/laptop/{pid}-x.html">{title}</a> </h2>
+ <div class="product-brand text-muted"> <a href="https://infotec.example/laptop/{pid}-x.html">Lenovo</a></div>
+ <div class="product-price-and-shipping"><a href="#"> <span  class="product-price" content="1899" aria-label="Precio"> {price} </span></a> {regular_html}</div>
+ <div class="product-description-short">Marca : Lenovo Modelo : V15 Producto : Laptop</div>
+ <button class="btn add-to-cart" data-button-action="add-to-cart" type="submit"{dis}>Comprar</button></div>
+</article>'''
+
+
+INFOTEC_PAGE = f'''<div id="js-product-list">
+{infotec_card(10, "LAPTOP LENOVO IDEAPAD SLIM3 I3-N305 8GB 512GB SSD 15.6 FHD FREEDOS (82XB003MLM)", "S/. 1899", "S/. 2713")}
+{infotec_card(11, "LAPTOP LENOVO V15 G4 AMN RYZEN 3-7320U 8GB LPDDR5 512GB SSD 15.6 FHD FREEDOS (...", "S/. 1789", disabled=True)}
+</div><div>Mostrando 1-2 de 2 artículo(s)</div>'''
+
+
+def test_infotec_theme_price_brand_and_part_number():
+    offers, warnings, total = parse_ps(INFOTEC_PAGE, store_code="INFOTEC", category_slug="laptops")
+    by_id = {o.external_product_id: o for o in offers}
+    assert set(by_id) == {"10", "11"} and not warnings and total == 2
+    slim = by_id["10"]
+    assert (slim.price_cents, slim.list_price_cents, slim.brand) == (189900, 271300, "Lenovo")
+    assert slim.identifiers == {"MPN": "82XB003MLM"} and slim.availability == "AVAILABLE"
+    v15 = by_id["11"]
+    # Título recortado: sin número de parte completo NO hay MPN (y nunca la serie "V15").
+    assert v15.identifiers == {} and v15.title.endswith("FREEDOS")
+    assert v15.availability == "OUT_OF_STOCK"
+
+
+def test_magento_list_with_extra_classes():
+    from app.spiders.magento.base import parse_listing as parse_mg
+    page = '''<ol class="filterproducts products list items product-items">
+<li class="item product product-item"><div class="product-item-info">
+<a class="product-item-link" href="https://phantom.example/ps5.html">PlayStation 5 Slim Digital</a>
+<div data-product-id="38618"></div>
+<span data-price-amount="3799.9" data-price-type="finalPrice"></span>
+<form data-role="tocart-form"></form></div></li></ol>'''
+    offers, _, _ = parse_mg(page, store_code="PHANTOM", category_slug="consolas")
+    assert len(offers) == 1 and offers[0].price_cents == 379990 and offers[0].brand == "Sony"
+
+
+def test_store_crawl_delay_is_respected():
+    from app.spiders.magento.registry import SPIDERS as MAGENTO
+    assert MAGENTO["phantom"].custom_settings["DOWNLOAD_DELAY"] >= 10  # Crawl-delay: 10
+    assert MAGENTO["efe"].custom_settings["DOWNLOAD_DELAY"] == 6

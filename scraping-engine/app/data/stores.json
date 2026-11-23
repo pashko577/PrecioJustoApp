@@ -415,5 +415,109 @@
       "conclusion": "Viable; falta construir su extractor.",
       "notes": "Supermercado: poca oferta en las categorías actuales; baja prioridad."
     }
+  },
+  {
+    "code": "INFOTEC",
+    "name": "Infotec",
+    "baseUrl": "https://infotec.com.pe",
+    "platform": "PRESTASHOP",
+    "spider": "infotec",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "User-agent * solo bloquea parámetros de búsqueda/filtros y páginas de cuenta (controller=address, authentication, etc.). Los listados de categoría están permitidos.",
+      "terms": "Términos y Condiciones para Compras en Línea (/content/12-...): regulan pagos, recargos, despachos y garantías. Sin cláusulas sobre acceso automatizado, extracción, reproducción ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: listados de categoría (?page=N), 1 solicitud a la vez, pausa de 6 s, detenerse ante 403/429/503 o desafío anti-bots, cada 12 h. Requiere revisión legal antes del lanzamiento comercial (13.3).",
+      "notes": "Precio 'S/. 1579'. Título recortado en el listado; el número de parte entre paréntesis se usa como MPN solo si está completo. El campo 'Modelo' de la descripción es la serie (V15) y NO se usa como código."
+    },
+    "categoryPaths": {
+      "/3-laptops-y-notebooks": "laptops",
+      "/5-monitores-y-mas": "monitores",
+      "/143-procesadores-intel": "procesadores",
+      "/144-procesadores-amd": "procesadores"
+    }
+  },
+  {
+    "code": "PHANTOM",
+    "name": "Phantom",
+    "baseUrl": "https://phantom.pe",
+    "platform": "MAGENTO",
+    "spider": "phantom",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "downloadDelay": 10,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "User-agent * con Crawl-delay: 10 (se respeta: pausa de 10 s). Bloquea /catalog/, /*SID= y /*&p=* (la paginación usa ?p=N como primer parámetro, que no está bloqueado).",
+      "terms": "Políticas y condiciones de uso (/politicas-condiciones-uso): privacidad, compras, envíos y garantías. Sin cláusulas sobre acceso automatizado, extracción, reproducción ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: listado de consolas, 1 solicitud cada 10 s, detenerse ante 403/429/503 o desafío anti-bots, cada 12 h. Requiere revisión legal antes del lanzamiento comercial (13.3).",
+      "notes": "Tienda de videojuegos: solo consolas (nueva categoría). Sin código de fabricante en el listado: se asocia por puntuación."
+    },
+    "categoryPaths": {
+      "/gaming-videojuegos/consolas.html": "consolas"
+    }
+  },
+  {
+    "code": "ESTILOS",
+    "name": "Estilos",
+    "baseUrl": "https://www.estilos.com.pe",
+    "platform": "VTEX",
+    "spider": "estilos",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "User-agent * con Allow: /; solo bloquea /busca y parámetros de filtros (&initialMap=, &_q=). La API pública de catálogo VTEX no está bloqueada. Ids de categoría obtenidos con búsquedas espaciadas (20 s).",
+      "terms": "Términos y condiciones (/terminos-y-condiciones): regulan compras (1 unidad por persona en ofertas), despachos y tamaños de envío. Sin cláusulas sobre acceso automatizado, extracción, reproducción ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: API pública de catálogo VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403, cada 12 h. No mostrar fotos. Requiere revisión legal antes del lanzamiento comercial (13.3).",
+      "notes": "Vende la propia tienda (vendedor 1). Pocos productos con EAN: se asocian sobre todo por modelo y puntuación. Calzado sin códigos: no se incluye."
+    },
+    "vtexCategories": {
+      "/100000000/102000000/102040000/": "laptops",
+      "/100000000/101000000/101020000/101020100/": "celulares",
+      "/100000000/102000000/102050000/": "monitores",
+      "/200000000/202000000/202020000/202020600/": "refrigeradoras",
+      "/200000000/202000000/202030000/202030100/": "lavadoras",
+      "/200000000/201000000/201110000/": "microondas"
+    },
+    "vtexCategoryNames": {
+      "/100000000/102000000/102040000/": "Tecnología > Computadoras > Laptops",
+      "/100000000/101000000/101020000/101020100/": "Tecnología > Telefonía > Celulares y teléfonos > Smartphones",
+      "/100000000/102000000/102050000/": "Tecnología > Computadoras > Monitores",
+      "/200000000/202000000/202020000/202020600/": "Electrohogar > Línea blanca > Refrigeración > Refrigerador",
+      "/200000000/202000000/202030000/202030100/": "Electrohogar > Línea blanca > Lavado > Lavadoras",
+      "/200000000/201000000/201110000/": "Electrohogar > Electrodomésticos de cocina > Microondas"
+    }
+  },
+  {
+    "code": "SHOPSTAR",
+    "name": "Shopstar",
+    "baseUrl": "https://www.shopstar.pe",
+    "platform": "VTEX",
+    "spider": "shopstar",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "User-agent * bloquea /register/, /search/, &map=, /shpseller y /deleted/; permite /products/, /departamento/, /categoria/ y /p. La API pública de catálogo VTEX no está bloqueada. Ids de categoría obtenidos con búsquedas espaciadas (20 s).",
+      "terms": "Términos y condiciones de San Borja Global Opportunities S.A.C. (marketplace con marca Interbank). Sección 9 'Propiedad intelectual': prohíbe el 'uso indebido de la aplicación, aprovechamiento indebido o actos que desnaturalicen su propósito y generen una ventaja o beneficio ilegítimo para el Cliente en perjuicio del Marketplace'. No menciona extracción, reproducción de contenidos ni acceso automatizado.",
+      "conclusion": "Viable con extracción responsable y revisión legal prioritaria antes del lanzamiento (la cláusula 9 es amplia): API pública de catálogo VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403, cada 12 h. Se enlaza al producto en Shopstar (deriva compradores, no los perjudica). No mostrar fotos.",
+      "notes": "Marketplace: muestra el vendedor de cada oferta. Búsquedas de laptops, celulares y monitores devuelven sobre todo accesorios: solo electrohogar."
+    },
+    "vtexCategories": {
+      "/441/442/507/": "refrigeradoras",
+      "/441/445/511/": "lavadoras",
+      "/441/446/487/": "microondas"
+    },
+    "vtexCategoryNames": {
+      "/441/442/507/": "Electrohogar > Refrigeración > Refrigeradoras",
+      "/441/445/511/": "Electrohogar > Lavado > Lavadoras",
+      "/441/446/487/": "Electrohogar > Electrodomésticos > Hornos microondas"
+    }
   }
 ]

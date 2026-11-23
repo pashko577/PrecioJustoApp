@@ -121,7 +121,12 @@ def store_configs(platform: str, path: Path = STORES_FILE) -> list[dict]:
 
 def build_spider_class(store: dict, base: type[ListingSpider], module: str) -> type[ListingSpider]:
     class_name = "".join(part.capitalize() for part in store["spider"].split("_")) + "Spider"
+    settings = dict(base.custom_settings)
+    if store.get("downloadDelay"):
+        # robots.txt con Crawl-delay mayor que la pausa por defecto: se respeta el de la tienda.
+        settings["DOWNLOAD_DELAY"] = max(settings.get("DOWNLOAD_DELAY", 0), store["downloadDelay"])
     return type(class_name, (base,), {
+        "custom_settings": settings,
         "__module__": module,
         "__doc__": f"{store['name']} ({store['baseUrl']}) — generado desde stores.json.",
         "name": store["spider"],

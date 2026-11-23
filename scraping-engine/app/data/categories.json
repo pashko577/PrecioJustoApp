@@ -3,7 +3,8 @@
     { "slug": "laptops", "name": "Laptops" },
     { "slug": "celulares", "name": "Celulares" },
     { "slug": "monitores", "name": "Monitores" },
-    { "slug": "procesadores", "name": "Procesadores" }
+    { "slug": "procesadores", "name": "Procesadores" },
+    { "slug": "consolas", "name": "Consolas" }
   ]},
   { "slug": "computacion", "name": "Computación", "icon": "memory", "children": [
     { "slug": "ssd", "name": "Discos SSD" },

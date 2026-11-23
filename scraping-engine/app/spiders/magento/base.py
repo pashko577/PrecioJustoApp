@@ -20,6 +20,7 @@ from app.normalizers.identifiers import canonical_mpn
 from app.normalizers.price import number_to_cents
 from app.spiders.listing_base import REFURBISHED_RE, ListingSpider
 
+_LIST_START_RE = re.compile(r'<ol class="[^"]*\bproducts list items product-items')
 _ITEM_SPLIT = re.compile(r'<li class="item product product-item')
 _LINK_RE = re.compile(r'class="product-item-link"[^>]*href="([^"]+)"[^>]*>\s*([^<]+?)\s*<|'
                       r'href="([^"]+)"[^>]*class="product-item-link"[^>]*>\s*([^<]+?)\s*<')
@@ -39,7 +40,9 @@ def parse_listing(page_html: str, *, store_code: str, category_slug: str | None,
     total = max(totals) if totals else None
 
     # Solo la lista de productos: evita tomar precios de bloques como "vistos recientemente".
-    start = page_html.find('<ol class="products list items product-items')
+    # Algunos temas agregan clases antes ("filterproducts products list items ...", Phantom).
+    list_start = _LIST_START_RE.search(page_html)
+    start = list_start.start() if list_start else -1
     end = page_html.find("</ol>", start) if start >= 0 else -1
     region = page_html[start:end] if start >= 0 and end > start else ""
 
