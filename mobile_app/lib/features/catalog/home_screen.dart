@@ -35,6 +35,7 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(categoriesProvider);
           ref.invalidate(storesProvider);
+          ref.invalidate(priceDropsProvider);
           ref.invalidate(catalogFeedProvider);
           await ref.read(catalogFeedProvider.future);
         },
@@ -52,7 +53,7 @@ class HomeScreen extends ConsumerWidget {
                 bottom: false,
                 sliver: SliverToBoxAdapter(child: _Header()),
               ),
-              const SliverToBoxAdapter(child: _StoresHero()),
+              const SliverToBoxAdapter(child: _Hero()),
               const SliverToBoxAdapter(child: _RecentlyViewed()),
               const SliverToBoxAdapter(child: _StoreStrip()),
               const SliverToBoxAdapter(child: _CategoryGrid()),
@@ -180,8 +181,213 @@ class _Header extends StatelessWidget {
   );
 }
 
-/// Banner principal: cuántas tiendas comparamos y sus logos.
-/// Cuando el resumen del producto guarde el precio anterior, aquí irán «Bajaron de precio».
+/// Banner principal: bajadas de precio recientes si las hay; si no, las tiendas que comparamos.
+class _Hero extends ConsumerWidget {
+  const _Hero();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final drops = ref.watch(priceDropsProvider).value ?? const <Product>[];
+    final stores =
+        ref.watch(storesProvider).value ?? const <String, StoreInfo>{};
+    final shown = drops
+        .where(
+          (p) =>
+              summaryPriceState(
+                p.summary,
+                stores[p.summary.minPriceStoreCode],
+              ) ==
+              SummaryPriceState.fresh,
+        )
+        .take(5)
+        .toList();
+    return shown.isEmpty
+        ? const _StoresHero()
+        : _DropsCarousel(products: shown);
+  }
+}
+
+const _heroGradient = LinearGradient(
+  colors: [AppColors.ink, AppColors.ink2, AppColors.blue],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+class _DropsCarousel extends ConsumerStatefulWidget {
+  const _DropsCarousel({required this.products});
+
+  final List<Product> products;
+
+  @override
+  ConsumerState<_DropsCarousel> createState() => _DropsCarouselState();
+}
+
+class _DropsCarouselState extends ConsumerState<_DropsCarousel> {
+  final _controller = PageController(viewportFraction: 0.92);
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stores =
+        ref.watch(storesProvider).value ?? const <String, StoreInfo>{};
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 196,
+            child: PageView.builder(
+              controller: _controller,
+              padEnds: false,
+              itemCount: widget.products.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) {
+                final p = widget.products[i];
+                final s = p.summary;
+                final store =
+                    stores[s.minPriceStoreCode]?.name ??
+                    s.minPriceStoreCode ??
+                    '';
+                return Padding(
+                  padding: EdgeInsets.only(left: i == 0 ? 16 : 6, right: 6),
+                  child: Material(
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    clipBehavior: Clip.antiAlias,
+                    child: Ink(
+                      decoration: const BoxDecoration(gradient: _heroGradient),
+                      child: InkWell(
+                        onTap: () => context.push('/product/${p.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Pill(
+                                      label: 'Bajó ${s.priceDropPercent}%',
+                                      icon: Icons.south,
+                                      background: AppColors.teal,
+                                      foreground: AppColors.ink,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      p.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.baseline,
+                                        textBaseline: TextBaseline.alphabetic,
+                                        children: [
+                                          Text(
+                                            formatCents(s.minPriceCents!),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: -0.5,
+                                              fontFeatures: tabularFigures,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            formatCents(s.priceDropFromCents!),
+                                            style: const TextStyle(
+                                              color: Color(0xB3FFFFFF),
+                                              fontSize: 13,
+                                              decoration:
+                                                  TextDecoration.lineThrough,
+                                              decorationColor: Color(
+                                                0xB3FFFFFF,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      'en $store${s.offerCount > 1 ? ', comparado en ${s.offerCount} tiendas' : ''}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xD9FFFFFF),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.lg,
+                                ),
+                                child: SizedBox.square(
+                                  dimension: 100,
+                                  child: ProductImage(
+                                    url: p.imageUrl,
+                                    background: Colors.white,
+                                    padding: 8,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (widget.products.length > 1) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < widget.products.length; i++)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: i == _page ? 20 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i == _page
+                          ? AppColors.ink
+                          : const Color(0xFFC3CADB),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Banner cuando no hay bajadas recientes: cuántas tiendas comparamos y sus logos.
 class _StoresHero extends ConsumerWidget {
   const _StoresHero();
 
@@ -306,9 +512,13 @@ class _RecentlyViewed extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: _pad,
-            child: SectionHeader(title: 'Vistos recientemente'),
+            child: SectionHeader(
+              title: 'Vistos recientemente',
+              action: 'Borrar',
+              onAction: () => ref.read(recentProductsProvider.notifier).clear(),
+            ),
           ),
           SizedBox(
             height: 170,

@@ -42,6 +42,9 @@ class PriceSummary {
     this.verifiedOfferCount = 0,
     this.lastCheckedAt,
     this.currency = 'PEN',
+    this.priceDropFromCents,
+    this.priceDropPercent,
+    this.priceDroppedAt,
   });
 
   final int? minPriceCents;
@@ -50,6 +53,27 @@ class PriceSummary {
   final int verifiedOfferCount;
   final DateTime? lastCheckedAt;
   final String currency;
+
+  /// Bajada reciente del mejor precio, medida contra precios que observamos nosotros
+  /// (nunca contra el precio «normal» de la tienda). Ver `summary.py` en el motor.
+  final int? priceDropFromCents;
+  final int? priceDropPercent;
+  final DateTime? priceDroppedAt;
+
+  /// Días durante los que se anuncia una bajada (igual que `PRICE_DROP_WINDOW_DAYS`).
+  static const dropWindow = Duration(days: 7);
+
+  /// La bajada se puede anunciar: existe y es reciente.
+  bool hasRecentDrop({DateTime? now}) {
+    final at = priceDroppedAt;
+    if (priceDropPercent == null ||
+        priceDropPercent! <= 0 ||
+        priceDropFromCents == null ||
+        at == null) {
+      return false;
+    }
+    return (now ?? DateTime.now()).difference(at) <= dropWindow;
+  }
 
   factory PriceSummary.fromMap(Map<String, dynamic>? d) {
     if (d == null) return const PriceSummary();
@@ -60,6 +84,9 @@ class PriceSummary {
       verifiedOfferCount: _int(d['verifiedOfferCount']) ?? 0,
       lastCheckedAt: _date(d['lastCheckedAt']),
       currency: d['currency'] as String? ?? 'PEN',
+      priceDropFromCents: _int(d['priceDropFromCents']),
+      priceDropPercent: _int(d['priceDropPercent']),
+      priceDroppedAt: _date(d['priceDroppedAt']),
     );
   }
 }

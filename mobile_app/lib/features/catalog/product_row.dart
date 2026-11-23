@@ -15,10 +15,13 @@ enum SummaryPriceState { fresh, unconfirmed, none }
 
 SummaryPriceState summaryPriceState(PriceSummary s, StoreInfo? store) {
   if (s.minPriceCents == null) return SummaryPriceState.none;
-  return ProductRow.summaryIsFresh(s, store) ? SummaryPriceState.fresh : SummaryPriceState.unconfirmed;
+  return ProductRow.summaryIsFresh(s, store)
+      ? SummaryPriceState.fresh
+      : SummaryPriceState.unconfirmed;
 }
 
-String storesLabel(int n) => n == 0 ? 'Sin ofertas aún' : '$n ${n == 1 ? 'tienda' : 'tiendas'}';
+String storesLabel(int n) =>
+    n == 0 ? 'Sin ofertas aún' : '$n ${n == 1 ? 'tienda' : 'tiendas'}';
 
 /// Fila de producto (listas y resultados compactos): foto, nombre, tienda y precio.
 class ProductRow extends ConsumerWidget {
@@ -28,18 +31,28 @@ class ProductRow extends ConsumerWidget {
 
   /// RN-01: el precio del resumen es vigente si se verificó dentro del plazo de su tienda.
   /// La verificación puede venir del propio resumen o de la última corrida completa de la tienda.
-  static bool summaryIsFresh(PriceSummary s, StoreInfo? store, {DateTime? now}) {
+  static bool summaryIsFresh(
+    PriceSummary s,
+    StoreInfo? store, {
+    DateTime? now,
+  }) {
     var checked = s.lastCheckedAt;
     final run = store?.lastCompleteRunAt;
     if (run != null && (checked == null || run.isAfter(checked))) checked = run;
-    return checked != null && isFresh(checked, store?.freshnessMinutes ?? defaultFreshnessMinutes, now: now);
+    return checked != null &&
+        isFresh(
+          checked,
+          store?.freshnessMinutes ?? defaultFreshnessMinutes,
+          now: now,
+        );
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = product.summary;
     final theme = Theme.of(context);
-    final stores = ref.watch(storesProvider).value ?? const <String, StoreInfo>{};
+    final stores =
+        ref.watch(storesProvider).value ?? const <String, StoreInfo>{};
     final state = summaryPriceState(s, stores[s.minPriceStoreCode]);
 
     return Padding(
@@ -56,7 +69,11 @@ class ProductRow extends ConsumerWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: SizedBox(width: 72, height: 72, child: ProductImage(url: product.imageUrl, padding: 6)),
+                  child: SizedBox(
+                    width: 72,
+                    height: 72,
+                    child: ProductImage(url: product.imageUrl, padding: 6),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -67,7 +84,11 @@ class ProductRow extends ConsumerWidget {
                         product.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontSize: 13, fontWeight: FontWeight.w500, height: 1.35),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          height: 1.35,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -82,18 +103,30 @@ class ProductRow extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: switch (state) {
                     SummaryPriceState.fresh => [
-                        Text('desde', style: theme.textTheme.labelSmall),
-                        Text(
-                          formatCents(s.minPriceCents!),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, fontFeatures: tabularFigures),
+                      Text('desde', style: theme.textTheme.labelSmall),
+                      Text(
+                        formatCents(s.minPriceCents!),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: tabularFigures,
                         ),
-                      ],
+                      ),
+                    ],
                     SummaryPriceState.unconfirmed => [
-                        Text('Precio por\nconfirmar', textAlign: TextAlign.end, style: _pending),
-                      ],
+                      Text(
+                        'Precio por\nconfirmar',
+                        textAlign: TextAlign.end,
+                        style: _pending,
+                      ),
+                    ],
                     SummaryPriceState.none => [
-                        Text('Sin precio\nverificado', textAlign: TextAlign.end, style: theme.textTheme.bodySmall),
-                      ],
+                      Text(
+                        'Sin precio\nverificado',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   },
                 ),
               ],
@@ -105,11 +138,21 @@ class ProductRow extends ConsumerWidget {
   }
 }
 
-const _pending = TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.amberInk, height: 1.3);
+const _pending = TextStyle(
+  fontSize: 12,
+  fontWeight: FontWeight.w600,
+  color: AppColors.amberInk,
+  height: 1.3,
+);
 
 /// Card de la grilla: foto, marca, nombre, precio más bajo y la tienda que lo tiene.
 class ProductCard extends ConsumerWidget {
-  const ProductCard({super.key, required this.product, this.favorite, this.onOpen});
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.favorite,
+    this.onOpen,
+  });
 
   final Product product;
 
@@ -123,10 +166,12 @@ class ProductCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = product.summary;
     final theme = Theme.of(context);
-    final stores = ref.watch(storesProvider).value ?? const <String, StoreInfo>{};
+    final stores =
+        ref.watch(storesProvider).value ?? const <String, StoreInfo>{};
     final storeCode = s.minPriceStoreCode;
     final store = storeCode == null ? null : stores[storeCode];
     final state = summaryPriceState(s, store);
+    final drop = state == SummaryPriceState.fresh && s.hasRecentDrop();
 
     return Material(
       color: AppColors.surface,
@@ -150,7 +195,18 @@ class ProductCard extends ConsumerWidget {
                     fit: StackFit.expand,
                     children: [
                       ProductImage(url: product.imageUrl),
-                      if (favorite != null) Positioned(top: 6, right: 6, child: favorite!),
+                      if (drop)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Pill(
+                            label: '-${s.priceDropPercent}%',
+                            background: AppColors.magenta,
+                            foreground: Colors.white,
+                          ),
+                        ),
+                      if (favorite != null)
+                        Positioned(top: 6, right: 6, child: favorite!),
                     ],
                   ),
                 ),
@@ -164,39 +220,89 @@ class ProductCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (product.brand.isNotEmpty)
-                      Text(product.brand, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelMedium),
+                      Text(
+                        product.brand,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium,
+                      ),
                     Text(
                       product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, height: 1.35),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.35,
+                      ),
                     ),
                     const Spacer(),
                     switch (state) {
-                      SummaryPriceState.fresh => Text(
-                          formatCents(s.minPriceCents!),
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.4, fontFeatures: tabularFigures),
+                      // Se encoge antes que desbordarse (precios de 5 cifras en cards angostas).
+                      SummaryPriceState.fresh => FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              formatCents(s.minPriceCents!),
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.4,
+                                fontFeatures: tabularFigures,
+                              ),
+                            ),
+                            if (drop) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                formatCents(s.priceDropFromCents!),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      SummaryPriceState.unconfirmed => const Text('Precio por confirmar', style: _pending),
-                      SummaryPriceState.none => Text('Sin precio verificado', style: theme.textTheme.bodySmall),
+                      ),
+                      SummaryPriceState.unconfirmed => const Text(
+                        'Precio por confirmar',
+                        style: _pending,
+                      ),
+                      SummaryPriceState.none => Text(
+                        'Sin precio verificado',
+                        style: theme.textTheme.bodySmall,
+                      ),
                     },
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         if (storeCode != null && s.offerCount > 0) ...[
-                          StoreBadge(code: storeCode, name: store?.name ?? '', size: 18),
+                          StoreBadge(
+                            code: storeCode,
+                            name: store?.name ?? '',
+                            size: 18,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               store?.name ?? storeCode,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ] else
                           const Spacer(),
-                        Text(storesLabel(s.offerCount), style: theme.textTheme.labelSmall),
+                        Text(
+                          storesLabel(s.offerCount),
+                          style: theme.textTheme.labelSmall,
+                        ),
                       ],
                     ),
                   ],
@@ -212,23 +318,33 @@ class ProductCard extends ConsumerWidget {
 
 /// Íconos de las categorías de primer nivel (`categories.icon`).
 IconData categoryIcon(String? name) => switch (name) {
-      'devices' => Icons.devices,
-      'memory' => Icons.memory,
-      'kitchen' => Icons.kitchen,
-      'chair' => Icons.chair,
-      'checkroom' => Icons.checkroom,
-      'spa' => Icons.spa,
-      'sports_soccer' => Icons.sports_soccer,
-      'toys' => Icons.toys,
-      'child_care' => Icons.child_care,
-      'directions_car' => Icons.directions_car,
-      'handyman' => Icons.handyman,
-      'menu_book' => Icons.menu_book,
-      _ => Icons.category,
-    };
+  'devices' => Icons.devices,
+  'memory' => Icons.memory,
+  'kitchen' => Icons.kitchen,
+  'chair' => Icons.chair,
+  'checkroom' => Icons.checkroom,
+  'spa' => Icons.spa,
+  'sports_soccer' => Icons.sports_soccer,
+  'toys' => Icons.toys,
+  'child_care' => Icons.child_care,
+  'directions_car' => Icons.directions_car,
+  'handyman' => Icons.handyman,
+  'menu_book' => Icons.menu_book,
+  _ => Icons.category,
+};
 
 /// Foto de una categoría de primer nivel (`assets/categories/{slug}.jpg`), si existe.
 const categoryPhotos = {
-  'tecnologia', 'computacion', 'electrodomesticos', 'hogar', 'moda', 'belleza',
-  'deportes', 'juguetes', 'bebes', 'automotriz', 'ferreteria', 'libros',
+  'tecnologia',
+  'computacion',
+  'electrodomesticos',
+  'hogar',
+  'moda',
+  'belleza',
+  'deportes',
+  'juguetes',
+  'bebes',
+  'automotriz',
+  'ferreteria',
+  'libros',
 };
