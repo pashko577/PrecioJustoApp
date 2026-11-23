@@ -16,6 +16,7 @@ from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from app.catalog import CatalogError, ProductInput, build_product_doc, empty_summary, slugify
+from app.normalizers.text import normalize_text, search_tokens
 from app.matching.scoring import Candidate, Listing, MatchDecision, decide
 from app.models.offer import ScrapedOffer
 
@@ -43,6 +44,9 @@ class ProductMatcher:
         self.valid_categories = valid_categories
         self._by_category: dict[str, dict[str, Candidate]] = {}
         self._by_key: dict[str, str] = {}  # "GTIN:..." / "MPN:..." -> product_id
+        # Productos creados a partir de una publicación: "{storeCode}__{externalId}" -> product_id
+        self._owned_by: dict[str, str] = {}
+        self.renamed_products = 0
         self.created_products = 0
 
     def _load_category(self, slug: str) -> dict[str, Candidate]:
@@ -52,6 +56,8 @@ class ProductMatcher:
             for snap in snaps:
                 data = snap.to_dict() or {}
                 loaded[snap.id] = candidate_from_doc(snap.id, data)
+                if source := data.get("source"):
+                    self._owned_by[f"{source.get('storeCode')}__{source.get('externalProductId')}"] = snap.id
                 for key in data.get("identifierKeys", []):
                     self._by_key[key] = snap.id
             self._by_category[slug] = loaded
@@ -97,6 +103,36 @@ class ProductMatcher:
             return decision
         return MatchDecision(None, "UNMATCHED", None, "sin categoría reconocida")
 
+    def refresh_owned_name(self, offer: ScrapedOffer, product_id: str | None) -> bool:
+        """Si el producto se creó desde ESTA publicación y su título cambió, actualiza el nombre.
+
+        Corrige nombres creados con errores (por ejemplo, duplicados) sin intervención manual.
+        Nunca toca productos creados desde otra tienda o cargados por un administrador.
+        El pipeline solo la llama cuando el título de la publicación cambió: cuesta 1 lectura.
+        """
+        if not product_id:
+            return False
+        snap = self.db.collection("products").document(product_id).get()
+        if not snap.exists:
+            return False
+        data = snap.to_dict() or {}
+        source = data.get("source") or {}
+        owner = f"{source.get('storeCode')}__{source.get('externalProductId')}"
+        if owner != offer.doc_id or data.get("displayName") == offer.title:
+            return False
+        candidate = candidate_from_doc(product_id, data)
+        self.db.collection("products").document(product_id).update({
+            "displayName": offer.title,
+            "normalizedName": normalize_text(offer.title),
+            "searchTokens": search_tokens(offer.title, candidate.brand, candidate.model),
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        })
+        cached = self._by_category.get(data.get("categorySlug", ""), {}).get(product_id)
+        if cached:
+            cached.name = offer.title
+        self.renamed_products += 1
+        return True
+
     def _create_product(self, offer: ScrapedOffer, slug: str) -> str | None:
         identifiers: dict[str, list[str]] = {}
         if gtin := offer.identifiers.get("GTIN"):
@@ -128,6 +164,7 @@ class ProductMatcher:
         })
         self.db.collection("products").document(product_id).set(data)
         self._by_category.setdefault(slug, {})[product_id] = candidate_from_doc(product_id, data)
+        self._owned_by[offer.doc_id] = product_id
         for key in data.get("identifierKeys", []):
             self._by_key[key] = product_id
         self.created_products += 1

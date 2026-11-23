@@ -7,7 +7,7 @@ from scrapy.http import Request, TextResponse
 from scrapy.utils.test import get_crawler
 
 from app.normalizers.price import number_to_cents
-from app.spiders.coolbox.products import CoolboxSpider
+from app.spiders.vtex.registry import SPIDERS
 from app.spiders.vtex.base import PAGE_SIZE, VtexSpider, offers_from_product, parse_total
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "vtex_search.json").read_text("utf-8"))
@@ -145,6 +145,10 @@ def test_stops_when_store_asks(status):
 
 
 def test_coolbox_configuration():
+    CoolboxSpider = SPIDERS["coolbox"]
+    assert CoolboxSpider.__name__ == "CoolboxSpider"
+    assert CoolboxSpider.allowed_domains == ["www.coolbox.pe"]
+    assert CoolboxSpider.categories["/47/258/259/"] == "ssd"
     assert CoolboxSpider.store_code == "COOLBOX"
     assert CoolboxSpider.base_url == "https://www.coolbox.pe"
     from app.catalog import flatten_categories
@@ -152,3 +156,51 @@ def test_coolbox_configuration():
     assert set(CoolboxSpider.categories.values()) <= valid
     assert 429 not in CoolboxSpider.custom_settings["RETRY_HTTP_CODES"]
     assert CoolboxSpider.custom_settings["DOWNLOAD_DELAY"] >= 3
+
+
+# ---------- Títulos sin repeticiones ----------
+
+from app.spiders.vtex.base import clean_title  # noqa: E402
+
+
+def test_title_real_duplicate_case_from_coolbox():
+    product = "Disco solido SSD Kingston A400, 480GB, SATA 6GBS, 25 7MM, negro"
+    item = "Disco Solido SSD Kingston A400 480GB SATA 6GBS 25 7MM"
+    assert clean_title(product, item, f"{product} {item}") == product
+
+
+def test_title_same_names():
+    assert clean_title("Celular Motorola G47", "Celular Motorola G47") == "Celular Motorola G47"
+
+
+def test_title_short_variant_is_appended():
+    assert clean_title("Laptop Demo Book 14", "Azul") == "Laptop Demo Book 14 - Azul"
+
+
+def test_title_item_more_complete_wins():
+    assert clean_title("MacBook Air 13", "MacBook Air 13 M4 16GB") == "MacBook Air 13 M4 16GB"
+
+
+def test_title_fallbacks():
+    assert clean_title("", "Solo variante") == "Solo variante"
+    assert clean_title(None, None, "Nombre completo") == "Nombre completo"
+
+
+def test_fixture_titles_use_variant_names():
+    offers, _ = all_offers()
+    assert offers["90011"].title == "Laptop Demo Book 14 Ryzen 5 16GB 512GB SSD - Gris"
+    assert offers["90012"].title == "Laptop Demo Book 14 Ryzen 5 16GB 512GB SSD - Azul"
+
+
+# ---------- Frecuencia por tienda ----------
+
+def test_is_due():
+    from datetime import datetime, timedelta, timezone
+
+    from app.spiders.vtex.base import is_due
+    now = datetime(2026, 11, 23, 12, tzinfo=timezone.utc)
+    assert is_due(None, now)
+    assert is_due({"scrapingIntervalMinutes": 720}, now)  # nunca corrió
+    assert not is_due({"scrapingIntervalMinutes": 720, "lastCompleteRunAt": now - timedelta(hours=6)}, now)
+    assert is_due({"scrapingIntervalMinutes": 720, "lastCompleteRunAt": now - timedelta(hours=11, minutes=30)}, now)
+    assert is_due({"scrapingIntervalMinutes": 360, "lastCompleteRunAt": now - timedelta(hours=6)}, now)

@@ -14,6 +14,145 @@
       "terms": "Términos y condiciones de RASH PERU S.R.L. (actualización 21/09/2026). Regulan compras (registro, pagos, despacho, devoluciones). No contienen cláusulas sobre acceso automatizado, extracción ni propiedad intelectual del contenido. Cláusula 5: precios vigentes solo en coolbox.pe; fotos referenciales.",
       "conclusion": "Viable con extracción responsable: catálogo público VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403. No mostrar fotos de la tienda. Requiere revisión legal antes del lanzamiento comercial (sección 13.3).",
       "notes": "La API /api/catalog_system/pub/category/tree respondió 429; se usan ids de categoría fijos."
+    },
+    "vtexCategories": {
+      "/47/65/": "laptops",
+      "/171/626/": "laptops",
+      "/47/66/": "monitores",
+      "/171/538/": "monitores",
+      "/47/258/259/": "ssd",
+      "/48/165/": "discos-externos",
+      "/20/21/": "celulares"
+    },
+    "vtexCategoryNames": {
+      "/47/65/": "Cómputo > Laptops",
+      "/171/626/": "Gamer > Laptops Gamer",
+      "/47/66/": "Cómputo > Monitores",
+      "/171/538/": "Gamer > Monitores Gamer",
+      "/47/258/259/": "Cómputo > Componentes > Discos Internos y SSD",
+      "/48/165/": "Almacenamiento > Discos externos",
+      "/20/21/": "Celulares y Accesorios > Celulares"
     }
+  },
+  {
+    "code": "PLAZAVEA",
+    "name": "Plaza Vea",
+    "baseUrl": "https://www.plazavea.com.pe",
+    "platform": "VTEX",
+    "spider": "plazavea",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite catálogo público y /api/catalog_system/pub/*; solo bloquea checkout y sitemaps de marcas. Sin crawl-delay. La API de árbol de categorías responde 429 (ids obtenidos con búsquedas espaciadas).",
+      "terms": "Términos y condiciones de Compañía Food Retail S.A.C. (CFR). Regulan compras, despachos y postventa. Sección XII 'Derechos de uso del sitio': 'La sola visita de este sitio [...] no impone al consumidor obligación alguna, a menos que haya aceptado las condiciones'. Sin cláusulas sobre acceso automatizado, extracción ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: catálogo público VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403, cada 12 h. No mostrar fotos de la tienda. Incluye vendedores de marketplace (se muestra el vendedor). Requiere revisión legal antes del lanzamiento comercial (sección 13.3).",
+      "notes": "La búsqueda 'monitor' devuelve accesorios; no se incluyen monitores para evitar asociaciones erróneas."
+    },
+    "vtexCategories": {
+      "/678/683/766/": "laptops",
+      "/678/683/1090/": "laptops",
+      "/678/686/917/": "celulares",
+      "/679/693/756/": "refrigeradoras",
+      "/679/691/750/": "lavadoras",
+      "/679/694/753/": "microondas",
+      "/679/688/1460/": "herramientas"
+    },
+    "vtexCategoryNames": {
+      "/678/683/766/": "Tecnología > Cómputo > Laptops",
+      "/678/683/1090/": "Tecnología > Cómputo > Laptops Gamers",
+      "/678/686/917/": "Tecnología > Telefonía > Celulares y Smartphones",
+      "/679/693/756/": "Electrohogar > Refrigeración > Refrigeradoras",
+      "/679/691/750/": "Electrohogar > Lavado > Lavadoras",
+      "/679/694/753/": "Electrohogar > Electrodomésticos de Cocina > Hornos Microondas",
+      "/679/688/1460/": "Electrohogar > Herramientas Eléctricas > Taladros"
+    }
+  },
+  {
+    "code": "OECHSLE",
+    "name": "Oechsle",
+    "baseUrl": "https://www.oechsle.pe",
+    "platform": "VTEX",
+    "spider": "oechsle",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite catálogo público y /api/catalog_system/pub/*; solo bloquea checkout y sitemaps de marcas. Sin crawl-delay. La API de árbol de categorías responde 429 (ids obtenidos con búsquedas espaciadas).",
+      "terms": "Términos y Condiciones Generales de la Web Oechsle.pe y APP Oechsle — Tiendas Peruanas S.A., RUC 20493020618. Regulan 'todo acceso, ingreso, registro, operación, transacción, compra' pero su contenido trata de compras, registro, despachos, devoluciones y datos personales. Sin cláusulas sobre acceso automatizado, extracción, copia ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: catálogo público VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403, cada 12 h. No mostrar fotos de la tienda. Incluye vendedores de marketplace (se muestra el vendedor). Requiere revisión legal antes del lanzamiento comercial (sección 13.3).",
+      "notes": "La búsqueda 'monitor' devuelve All in One; no se incluyen monitores."
+    },
+    "vtexCategories": {
+      "/160/168/209/": "laptops",
+      "/160/168/1222376/": "laptops",
+      "/160/170/217/": "celulares",
+      "/161/201/329/": "refrigeradoras",
+      "/161/332/200/": "lavadoras",
+      "/161/198/187/": "microondas",
+      "/161/1222467/1222629/": "herramientas"
+    },
+    "vtexCategoryNames": {
+      "/160/168/209/": "Tecnología > Cómputo > Laptops",
+      "/160/168/1222376/": "Tecnología > Cómputo > Laptops Gamers",
+      "/160/170/217/": "Tecnología > Telefonía > Celulares",
+      "/161/201/329/": "Electrohogar > Refrigeración > Refrigeradoras",
+      "/161/332/200/": "Electrohogar > Lavado > Lavadoras",
+      "/161/198/187/": "Electrohogar > Cocina > Hornos Microondas",
+      "/161/1222467/1222629/": "Electrohogar > Herramientas Eléctricas > Taladros"
+    }
+  },
+  {
+    "code": "PROMART",
+    "name": "Promart",
+    "baseUrl": "https://www.promart.pe",
+    "platform": "VTEX",
+    "spider": "promart",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite catálogo público y /api/catalog_system/pub/*; solo bloquea checkout y sitemaps de marcas. Sin crawl-delay. La API de árbol de categorías responde 429.",
+      "terms": "Términos y Condiciones Generales de Compra — Homecenters Peruanos S.A., RUC 20536557858. 'El uso de Promart.pe está sujeto a los siguientes Términos y Condiciones de uso'; su contenido trata de compras, despachos, cambios, devoluciones y garantías. Sin cláusulas sobre acceso automatizado, extracción ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: catálogo público VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403, cada 12 h. No mostrar fotos de la tienda. Incluye vendedores de marketplace. Requiere revisión legal antes del lanzamiento comercial (sección 13.3).",
+      "notes": "La búsqueda 'microondas' devuelve muebles; no se incluyen microondas."
+    },
+    "vtexCategories": {
+      "/804/837/844/": "laptops",
+      "/804/837/1264/": "monitores",
+      "/804/805/807/": "celulares",
+      "/599/603/814/": "refrigeradoras",
+      "/599/604/622/": "lavadoras",
+      "/17/228/281/": "herramientas"
+    },
+    "vtexCategoryNames": {
+      "/804/837/844/": "Tecnología > Cómputo > Laptops",
+      "/804/837/1264/": "Tecnología > Cómputo > Monitores",
+      "/804/805/807/": "Tecnología > Telefonía > Celulares y smartphones",
+      "/599/603/814/": "Electrohogar > Refrigeración > Refrigeradoras",
+      "/599/604/622/": "Electrohogar > Lavado y secado > Lavadoras",
+      "/17/228/281/": "Herramientas > Herramientas eléctricas portátiles > Taladros"
+    }
+  },
+  {
+    "code": "WONG",
+    "name": "Wong",
+    "baseUrl": "https://www.wong.pe",
+    "platform": "VTEX",
+    "spider": "wong",
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite catálogo público y /api/catalog_system/pub/*; solo bloquea checkout y sitemaps de marcas. Sin crawl-delay. La API de árbol de categorías responde 429 (ids obtenidos con búsquedas espaciadas).",
+      "terms": "",
+      "conclusion": "",
+      "notes": "PENDIENTE: no se pudieron leer los términos (la página no carga en navegador sin interfaz). Supermercado con poca oferta en las categorías actuales. No se activa sin evaluación. Búsquedas de prueba: pocas laptops, sin monitores, SSD ni taladros; sí refrigeradoras, lavadoras y microondas (ids /1000003/1000127/1000020/, /1000003/1000128/1000021/, /1000003/1000126/1000024/)."
+    },
+    "vtexCategories": {}
   }
 ]

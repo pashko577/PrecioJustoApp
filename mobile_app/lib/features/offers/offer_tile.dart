@@ -11,6 +11,7 @@ class OfferTile extends StatelessWidget {
     required this.offer,
     required this.fresh,
     this.isBest = false,
+    this.differenceCents,
     this.onOpenStore,
     this.now,
   });
@@ -18,6 +19,9 @@ class OfferTile extends StatelessWidget {
   final StoreOffer offer;
   final bool fresh;
   final bool isBest;
+
+  /// Cuánto más cuesta que la mejor oferta (`null` si no aplica).
+  final int? differenceCents;
   final VoidCallback? onOpenStore;
   final DateTime? now;
 
@@ -41,7 +45,16 @@ class OfferTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(offer.storeName, style: theme.textTheme.titleMedium)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(offer.storeName, style: theme.textTheme.titleMedium),
+                      if (isThirdPartySeller(offer))
+                        Text('Vendido por ${offer.sellerName}', style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ),
                 if (isBest) const _Badge(label: 'Mejor precio', icon: Icons.verified),
               ],
             ),
@@ -65,6 +78,13 @@ class OfferTile extends StatelessWidget {
                   ),
               ],
             ),
+            if (differenceCents != null && differenceCents! > 0) ...[
+              const SizedBox(height: 2),
+              Text(
+                '${formatCents(differenceCents!)} más que el mejor precio',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,

@@ -78,7 +78,10 @@ flutter run --dart-define=EMULATOR_HOST=192.168.X.X     # IP de tu PC en la red 
 
 ## Scraping
 
-Tiendas activas: **Coolbox** (VTEX). Evaluación registrada en [stores.json](scraping-engine/app/data/stores.json).
+Tiendas activas (VTEX): **Coolbox**, **Plaza Vea**, **Oechsle** y **Promart**. Wong está registrada pero inactiva (términos sin revisar).
+Cada tienda tiene su evaluación (robots.txt, términos, conclusión) y su mapa de categorías en [stores.json](scraping-engine/app/data/stores.json).
+
+**Agregar una tienda VTEX** es solo configuración: añadir su entrada en `stores.json` con la evaluación completa y `vtexCategories`. El spider se genera solo y el workflow la incluye si `scrapingEnabled` es `true` (no se activa sin evaluación).
 
 Probar contra el emulador (una página por categoría, ~1 minuto, pausas de 5 s entre solicitudes):
 
@@ -86,7 +89,7 @@ Probar contra el emulador (una página por categoría, ~1 minuto, pausas de 5 s 
 cd scraping-engine
 $env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085"
 .venv\Scripts\python -m app.admin.seed
-.venv\Scripts\scrapy crawl coolbox -a max_pages=1
+.venv\Scripts\scrapy crawl coolbox -a max_pages=1     # también: plazavea, oechsle, promart
 ```
 
 En producción lo ejecuta el workflow [scrape.yml](.github/workflows/scrape.yml) cada 6 horas, **solo si existe el secret `FIREBASE_SERVICE_ACCOUNT`**:

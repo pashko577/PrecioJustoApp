@@ -32,6 +32,59 @@ List<StoreOffer> sortOffers(
     });
 }
 
+/// Resultado de comparar las ofertas de un producto (RF-04, RN-02).
+class OfferComparison {
+  const OfferComparison({this.best, this.highest, this.comparableCount = 0, this.storeCount = 0});
+
+  /// Oferta vigente y disponible más barata.
+  final StoreOffer? best;
+
+  /// Oferta vigente y disponible más cara.
+  final StoreOffer? highest;
+
+  /// Cuántas ofertas son comparables (vigentes, disponibles y en soles).
+  final int comparableCount;
+
+  /// Cuántas tiendas distintas tienen ofertas comparables (una tienda puede tener varios vendedores).
+  final int storeCount;
+
+  /// Ahorro máximo entre la oferta más cara y la más barata (solo si hay 2 o más comparables).
+  int? get maxSavingsCents =>
+      comparableCount >= 2 && best != null && highest != null ? highest!.priceCents - best!.priceCents : null;
+}
+
+/// Una oferta es comparable si está vigente, disponible y en soles (RN-01, RN-02, RN-04).
+bool isComparable(StoreOffer o, bool Function(StoreOffer) fresh) =>
+    fresh(o) && o.availability == Availability.available && o.currency == 'PEN';
+
+OfferComparison compareOffers(List<StoreOffer> offers, bool Function(StoreOffer) fresh) {
+  final comparable = offers.where((o) => isComparable(o, fresh)).toList()
+    ..sort((a, b) => a.priceCents.compareTo(b.priceCents));
+  if (comparable.isEmpty) return const OfferComparison();
+  return OfferComparison(
+    best: comparable.first,
+    highest: comparable.last,
+    comparableCount: comparable.length,
+    storeCount: comparable.map((o) => o.storeCode).toSet().length,
+  );
+}
+
+/// Diferencia de precio frente a la mejor oferta, solo para ofertas comparables.
+int? differenceFromBest(StoreOffer o, OfferComparison c, bool Function(StoreOffer) fresh) {
+  final best = c.best;
+  if (best == null || identical(o, best) || !isComparable(o, fresh)) return null;
+  return o.priceCents - best.priceCents;
+}
+
+/// ¿Hay que mostrar el vendedor? Solo si es un tercero del marketplace (no la tienda misma).
+bool isThirdPartySeller(StoreOffer o) {
+  final seller = o.sellerName?.trim();
+  if (seller == null || seller.isEmpty) return false;
+  String norm(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  final s = norm(seller), store = norm(o.storeName);
+  return !(s.contains(store) || store.contains(s));
+}
+
 /// Texto relativo "hace 2 h" para la fecha de última verificación (RNF-13).
 String timeAgo(DateTime date, {DateTime? now}) {
   final diff = (now ?? DateTime.now().toUtc()).difference(date.toUtc());

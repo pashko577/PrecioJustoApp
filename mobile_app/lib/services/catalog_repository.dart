@@ -96,13 +96,10 @@ class CatalogRepository {
     return snap.docs.map(StoreOffer.fromDoc).toList();
   }
 
-  /// Vigencia por tienda (`stores.freshnessMinutes`). Pocas tiendas: una sola lectura de la colección.
-  Future<Map<String, int>> storeFreshness() async {
+  /// Vigencia y última corrida completa por tienda. Pocas tiendas: una sola lectura de la colección.
+  Future<Map<String, StoreInfo>> stores() async {
     final snap = await _db.collection('stores').get();
-    return {
-      for (final d in snap.docs)
-        d.id: (d.data()['freshnessMinutes'] as num?)?.toInt() ?? defaultFreshnessMinutes,
-    };
+    return {for (final d in snap.docs) d.id: StoreInfo.fromDoc(d)};
   }
 }
 
@@ -124,9 +121,15 @@ final categoriesProvider = FutureProvider<List<Category>>(
   (ref) => ref.watch(catalogRepositoryProvider).categories(),
 );
 
-final storeFreshnessProvider = FutureProvider<Map<String, int>>(
-  (ref) => ref.watch(catalogRepositoryProvider).storeFreshness(),
+final storesProvider = FutureProvider<Map<String, StoreInfo>>(
+  (ref) => ref.watch(catalogRepositoryProvider).stores(),
 );
+
+/// Vigencia en minutos por tienda (derivado de `storesProvider`).
+final storeFreshnessProvider = FutureProvider<Map<String, int>>((ref) async {
+  final stores = await ref.watch(storesProvider.future);
+  return {for (final s in stores.values) s.code: s.freshnessMinutes};
+});
 
 /// Categoría seleccionada en la pantalla de inicio (`null` = todas).
 class SelectedCategory extends Notifier<String?> {
@@ -213,7 +216,9 @@ final productProvider = FutureProvider.family<Product?, String>(
 );
 
 final offersProvider = FutureProvider.family<List<StoreOffer>, String>((ref, productId) async {
-  final offers = await ref.watch(catalogRepositoryProvider).offers(productId);
-  final freshness = await ref.watch(storeFreshnessProvider.future);
-  return sortOffers(offers, (code) => freshness[code] ?? defaultFreshnessMinutes);
+  final raw = await ref.watch(catalogRepositoryProvider).offers(productId);
+  final stores = await ref.watch(storesProvider.future);
+  // La fecha que ve el usuario es la verificación real (incluye la última corrida completa).
+  final offers = [for (final o in raw) o.withCheckedAt(effectiveCheckedAt(o, stores[o.storeCode]))];
+  return sortOffers(offers, (code) => stores[code]?.freshnessMinutes ?? defaultFreshnessMinutes);
 });

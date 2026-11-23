@@ -138,6 +138,7 @@ class StoreOffer {
     this.shippingCents,
     this.sellerName,
     this.currency = 'PEN',
+    this.missedRuns = 0,
   });
 
   final String id;
@@ -155,6 +156,26 @@ class StoreOffer {
   final String? sellerName;
   final String currency;
 
+  /// Corridas completas seguidas en que la publicación no apareció (0 = apareció en la última).
+  final int missedRuns;
+
+  /// Copia con otra fecha de verificación (ver `effectiveCheckedAt`).
+  StoreOffer withCheckedAt(DateTime checkedAt) => StoreOffer(
+        id: id,
+        storeCode: storeCode,
+        storeName: storeName,
+        title: title,
+        productUrl: productUrl,
+        priceCents: priceCents,
+        previousPriceCents: previousPriceCents,
+        shippingCents: shippingCents,
+        availability: availability,
+        lastCheckedAt: checkedAt,
+        sellerName: sellerName,
+        currency: currency,
+        missedRuns: missedRuns,
+      );
+
   factory StoreOffer.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return StoreOffer(
@@ -170,6 +191,38 @@ class StoreOffer {
       lastCheckedAt: _date(d['lastCheckedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       sellerName: d['sellerName'] as String?,
       currency: d['currency'] as String? ?? 'PEN',
+      missedRuns: _int(d['missedRuns']) ?? 0,
     );
   }
+}
+
+/// Datos de una tienda necesarios para la vigencia (RN-01).
+class StoreInfo {
+  const StoreInfo({required this.code, this.name = '', this.freshnessMinutes = 720, this.lastCompleteRunAt});
+
+  final String code;
+  final String name;
+  final int freshnessMinutes;
+
+  /// Inicio de la última corrida completa del scraper para esta tienda.
+  final DateTime? lastCompleteRunAt;
+
+  factory StoreInfo.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final d = doc.data() ?? const {};
+    return StoreInfo(
+      code: doc.id,
+      name: d['name'] as String? ?? doc.id,
+      freshnessMinutes: _int(d['freshnessMinutes']) ?? 720,
+      lastCompleteRunAt: _date(d['lastCompleteRunAt']),
+    );
+  }
+}
+
+/// Verificación real de una oferta. Las publicaciones sin cambios no se reescriben en cada
+/// corrida: si apareció en la última corrida completa de su tienda (`missedRuns == 0`), cuenta
+/// como verificada en esa fecha. Debe coincidir con `effective_checked_at` en Python.
+DateTime effectiveCheckedAt(StoreOffer offer, StoreInfo? store) {
+  final run = store?.lastCompleteRunAt;
+  if (run == null || offer.missedRuns != 0) return offer.lastCheckedAt;
+  return run.isAfter(offer.lastCheckedAt) ? run : offer.lastCheckedAt;
 }

@@ -12,8 +12,9 @@ Reglas de extracción responsable (PRECIO_JUSTO.md, 7.7):
 from __future__ import annotations
 
 import json
+import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import scrapy
@@ -22,11 +23,26 @@ from scrapy.exceptions import CloseSpider
 from app.models.offer import ScrapedOffer
 from app.normalizers.identifiers import canonical_gtin
 from app.normalizers.price import number_to_cents
+from app.normalizers.text import normalize_text, word_tokens
 from app.pipelines.job_errors import record_error
 
 PAGE_SIZE = 50          # máximo que permite VTEX por solicitud
 MAX_OFFSET = 2500       # VTEX no permite paginar más allá de este índice
 STOP_STATUSES = (403, 429)
+# Margen para que una corrida programada no se salte por unos minutos de diferencia del cron.
+SCHEDULE_TOLERANCE = timedelta(minutes=45)
+
+
+def is_due(store: dict | None, now: datetime | None = None) -> bool:
+    """¿Toca extraer esta tienda? Según `scrapingIntervalMinutes` y `lastCompleteRunAt`."""
+    if not store:
+        return True
+    last = store.get("lastCompleteRunAt")
+    if last is None:
+        return True
+    now = now or datetime.now(timezone.utc)
+    interval = timedelta(minutes=int(store.get("scrapingIntervalMinutes") or 360))
+    return now - last >= interval - SCHEDULE_TOLERANCE
 
 _RESOURCES_RE = re.compile(r"(\d+)-(\d+)/(\d+)")
 _REFURBISHED_RE = re.compile(r"reacondicionad|refurbished|open box|seminuevo", re.I)
@@ -40,6 +56,30 @@ def parse_total(resources_header: str | bytes | None) -> int | None:
         resources_header = resources_header.decode("latin-1")
     match = _RESOURCES_RE.search(resources_header)
     return int(match.group(3)) if match else None
+
+
+def clean_title(product_name: str | None, item_name: str | None, name_complete: str | None = None) -> str:
+    """Título sin repeticiones.
+
+    VTEX arma `nameComplete` como `productName + itemName`. Cuando la variante repite el nombre
+    del producto con otras palabras, el resultado sale duplicado ("SSD Kingston A400, 480GB ...
+    SSD Kingston A400 480GB ..."). Solo se agrega la variante si aporta palabras nuevas.
+    """
+    product = (product_name or "").strip()
+    item = (item_name or "").strip()
+    if not product:
+        return item or (name_complete or "").strip()
+    if not item or normalize_text(item) == normalize_text(product):
+        return product
+    product_words, item_words = set(word_tokens(product)), set(word_tokens(item))
+    if item_words <= product_words:
+        return product            # la variante no agrega nada
+    if product_words <= item_words:
+        return item               # la variante es el nombre más completo
+    if len(item) <= 40:
+        return f"{product} - {item}"   # p. ej. "Laptop X ... - Azul"
+    extra = [w for w in item.split() if word_tokens(w) and set(word_tokens(w)) - product_words]
+    return f"{product} - {' '.join(extra)}" if extra else product
 
 
 def _default_seller(item: dict) -> dict | None:
@@ -75,7 +115,7 @@ def offers_from_product(product: dict, *, store_code: str, category_slug: str | 
         list_cents = number_to_cents(offer_data.get("ListPrice"))
         quantity = offer_data.get("AvailableQuantity") or 0
         available = bool(offer_data.get("IsAvailable", quantity > 0)) and quantity > 0
-        title = (item.get("nameComplete") or product.get("productName") or "").strip()
+        title = clean_title(product.get("productName"), item.get("name"), item.get("nameComplete"))
 
         identifiers: dict[str, str] = {}
         if gtin := canonical_gtin(item.get("ean")):
@@ -127,6 +167,7 @@ class VtexSpider(scrapy.Spider):
         self.max_pages = int(max_pages) if max_pages else None
         self.job_errors: list[dict] = []
         self.stopped_early = False
+        self.not_due = False
 
     def search_url(self, category_path: str, offset: int) -> str:
         query = urlencode({"fq": f"C:{category_path}", "_from": offset, "_to": offset + PAGE_SIZE - 1})
@@ -139,7 +180,20 @@ class VtexSpider(scrapy.Spider):
             cb_kwargs={"category_path": category_path, "slug": slug, "offset": offset},
         )
 
+    def _store_is_due(self) -> bool:
+        """Las corridas programadas respetan la frecuencia de la tienda; las manuales siempre corren."""
+        if os.getenv("JOB_TYPE") != "SCHEDULED":
+            return True
+        from app.firebase_client import get_db  # import tardío: las pruebas no necesitan Firestore
+
+        snap = get_db().collection("stores").document(self.store_code).get()
+        return is_due(snap.to_dict() if snap.exists else None)
+
     async def start(self):
+        if not self._store_is_due():
+            self.not_due = True
+            self.logger.info("%s: todavía no toca según su frecuencia; no se hacen solicitudes.", self.store_code)
+            return
         for category_path, slug in self.categories.items():
             yield self.make_request(category_path, slug, 0)
 

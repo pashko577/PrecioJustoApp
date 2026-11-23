@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/money.dart';
 import '../../core/offer_rules.dart';
 import '../../models/models.dart';
 import '../../services/catalog_repository.dart';
@@ -66,14 +67,16 @@ class ProductScreen extends ConsumerWidget {
 
   List<Widget> _buildOffers(List<StoreOffer> offers, Map<String, int> freshness) {
     bool fresh(StoreOffer o) => isFresh(o.lastCheckedAt, freshness[o.storeCode] ?? defaultFreshnessMinutes);
-    // La lista ya viene ordenada: la primera vigente y disponible es la mejor oferta.
-    final best = offers.where((o) => fresh(o) && o.availability == Availability.available).firstOrNull;
+    final comparison = compareOffers(offers, fresh);
     return [
+      ComparisonHeader(comparison: comparison, totalOffers: offers.length),
+      const SizedBox(height: 8),
       for (final o in offers)
         OfferTile(
           offer: o,
           fresh: fresh(o),
-          isBest: identical(o, best),
+          isBest: identical(o, comparison.best),
+          differenceCents: differenceFromBest(o, comparison, fresh),
           onOpenStore: o.productUrl.isEmpty ? null : () => _open(o.productUrl),
         ),
     ];
@@ -84,5 +87,56 @@ class ProductScreen extends ConsumerWidget {
     if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+/// Resumen de la comparación: mejor precio, tiendas comparadas y ahorro posible (RF-04).
+class ComparisonHeader extends StatelessWidget {
+  const ComparisonHeader({super.key, required this.comparison, required this.totalOffers});
+
+  final OfferComparison comparison;
+  final int totalOffers;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final best = comparison.best;
+    if (best == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            totalOffers == 0
+                ? 'Todavía no encontramos ofertas para este producto.'
+                : 'Ninguna oferta tiene un precio verificado y disponible en este momento.',
+          ),
+        ),
+      );
+    }
+    final savings = comparison.maxSavingsCents;
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Mejor precio verificado', style: theme.textTheme.labelMedium),
+            Text(
+              '${formatCents(best.priceCents)} en ${best.storeName}',
+              key: const Key('best-price'),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${comparison.storeCount == 1 ? 'Comparado en 1 tienda' : 'Comparado en ${comparison.storeCount} tiendas'}'
+              '${comparison.comparableCount > comparison.storeCount ? ' (${comparison.comparableCount} ofertas)' : ''}'
+              '${savings != null && savings > 0 ? ' · ahorras hasta ${formatCents(savings)}' : ''}',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

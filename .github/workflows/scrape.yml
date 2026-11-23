@@ -18,15 +18,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  plan:
+    name: Tiendas activas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      spiders: ${{ steps.list.outputs.spiders }}
+    steps:
+      - uses: actions/checkout@v5
+      # Lee stores.json sin dependencias externas: solo tiendas con scrapingEnabled.
+      - id: list
+        run: |
+          SPIDERS=$(python3 -c "import json;print(json.dumps([s['spider'] for s in json.load(open('scraping-engine/app/data/stores.json',encoding='utf-8')) if s.get('scrapingEnabled') and s.get('spider')]))")
+          echo "Tiendas activas: $SPIDERS"
+          echo "spiders=$SPIDERS" >> "$GITHUB_OUTPUT"
+
   scrape:
     name: Scraping ${{ matrix.spider }}
+    needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       max-parallel: 1   # una tienda a la vez
       matrix:
-        spider: [coolbox]
+        spider: ${{ fromJSON(needs.plan.outputs.spiders) }}
     env:
       JOB_TYPE: ${{ github.event_name == 'schedule' && 'SCHEDULED' || 'MANUAL' }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

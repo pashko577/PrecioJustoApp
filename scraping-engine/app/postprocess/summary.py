@@ -15,24 +15,41 @@ from app.catalog import NO_PRICE_SORT_VALUE
 DEFAULT_FRESHNESS_MINUTES = 12 * 60
 
 
-def compute_summary(offers: list[dict], freshness_by_store: dict[str, int], now: datetime | None = None) -> dict:
+def effective_checked_at(offer: dict, store: dict | None) -> datetime | None:
+    """Última verificación real de una oferta.
+
+    Las ofertas sin cambios no se reescriben: si apareció en la última corrida completa de su
+    tienda (`missedRuns == 0`), su verificación es `stores.lastCompleteRunAt`.
+    """
+    checked = offer.get("lastCheckedAt")
+    run = (store or {}).get("lastCompleteRunAt")
+    if run is not None and offer.get("missedRuns", 0) == 0 and offer.get("status", "ACTIVE") == "ACTIVE":
+        return max(checked, run) if checked else run
+    return checked
+
+
+def compute_summary(offers: list[dict], stores: dict[str, dict], now: datetime | None = None) -> dict:
     """Calcula el resumen a partir de los documentos `storeProducts` de un producto.
 
+    `stores`: código de tienda -> `{freshnessMinutes, lastCompleteRunAt}`.
     Precio mínimo: solo ofertas activas, vigentes, disponibles y en PEN.
     """
     now = now or datetime.now(timezone.utc)
     active = [o for o in offers if o.get("status", "ACTIVE") == "ACTIVE"]
     verified = []
+    checks = []
     for o in active:
-        checked = o.get("lastCheckedAt")
-        freshness = freshness_by_store.get(o.get("storeCode"), DEFAULT_FRESHNESS_MINUTES)
+        store = stores.get(o.get("storeCode")) or {}
+        checked = effective_checked_at(o, store)
+        if checked:
+            checks.append(checked)
+        freshness = store.get("freshnessMinutes", DEFAULT_FRESHNESS_MINUTES)
         fresh = checked is not None and now - checked <= timedelta(minutes=freshness)
         if fresh and o.get("availability") == "AVAILABLE" and o.get("currency", "PEN") == "PEN":
             verified.append(o)
 
     best = min(verified, key=lambda o: o["currentPriceCents"]) if verified else None
     prices = [o["currentPriceCents"] for o in active if o.get("currentPriceCents")]
-    checks = [o["lastCheckedAt"] for o in active if o.get("lastCheckedAt")]
     return {
         "currency": "PEN",
         "minPriceCents": best["currentPriceCents"] if best else None,
@@ -45,18 +62,15 @@ def compute_summary(offers: list[dict], freshness_by_store: dict[str, int], now:
     }
 
 
-def store_freshness(db) -> dict[str, int]:
-    return {
-        snap.id: (snap.to_dict() or {}).get("freshnessMinutes", DEFAULT_FRESHNESS_MINUTES)
-        for snap in db.collection("stores").stream()
-    }
+def store_info(db) -> dict[str, dict]:
+    return {snap.id: snap.to_dict() or {} for snap in db.collection("stores").stream()}
 
 
 def refresh_summaries(db, product_ids: set[str]) -> int:
     """Recalcula y guarda el resumen de los productos indicados. Devuelve cuántos actualizó."""
     if not product_ids:
         return 0
-    freshness = store_freshness(db)
+    stores = store_info(db)
     batch, pending, updated = db.batch(), 0, 0
     for pid in sorted(product_ids):
         offers = [
@@ -64,7 +78,7 @@ def refresh_summaries(db, product_ids: set[str]) -> int:
         ]
         # set+merge: no falla si el producto ya no existe (un update haría fallar todo el lote).
         batch.set(db.collection("products").document(pid), {
-            "summary": compute_summary(offers, freshness),
+            "summary": compute_summary(offers, stores),
             "updatedAt": firestore.SERVER_TIMESTAMP,
         }, merge=True)
         pending += 1

@@ -1241,7 +1241,19 @@ La viabilidad jurídica y contractual deberá evaluarse individualmente para cad
 
 > Las cuotas pueden cambiar. Verificar los valores vigentes en la página de precios de Firebase y de GitHub antes de cada etapa. En Spark, al agotar la cuota diaria el servicio se detiene hasta el día siguiente (no genera cobros).
 
-### 14.3. Presupuesto diario estimado del MVP
+### 14.3. Optimizaciones aplicadas en el sprint 5
+
+| Medida | Efecto |
+|---|---|
+| Una publicación sin cambios **no se reescribe**; la verificación queda en `stores.lastCompleteRunAt` (1 escritura por corrida) | Las escrituras pasan de ~N por corrida a solo los cambios |
+| Las publicaciones de la tienda se leen en **una consulta** al inicio; la detección de retiradas las reutiliza | Sin lecturas extra; la corrida es mucho más rápida |
+| Escrituras en lotes de 400 | Menos viajes de red |
+| El corrector de nombres solo actúa si el título cambió (1 lectura) | Evita leer categorías completas |
+| Frecuencia por tienda: Coolbox cada 6 h; Plaza Vea, Oechsle y Promart cada 12 h (vigencia 24 h) | Menos corridas en tiendas grandes |
+
+La app y el motor usan la misma regla: una oferta con `missedRuns == 0` está verificada en `max(lastCheckedAt, stores.lastCompleteRunAt)`.
+
+### 14.4. Presupuesto diario estimado del MVP
 
 Supuestos: 2 tiendas, 500 publicaciones, 4 corridas por día, 100 usuarios activos.
 
@@ -1303,7 +1315,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
 | 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
 | 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | ✅ Coolbox (falta el secret de producción) |
-| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | |
+| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 4 tiendas (Coolbox, Plaza Vea, Oechsle, Promart) |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | |
 | 7 | Seguimiento | Favoritos, listas y alertas | |
 | 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | |
