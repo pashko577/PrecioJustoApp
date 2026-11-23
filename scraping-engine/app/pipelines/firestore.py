@@ -13,6 +13,10 @@ Al cerrar la corrida:
   Solo se hace en corridas completas (sin límite de páginas ni detención por la tienda).
 - Se recalcula `products.summary` de los productos afectados.
 - `scrapingJobs/{jobId}`: resumen de la ejecución.
+
+Presupuesto diario (plan gratuito, ver `app/quota.py`): cada corrida recibe un tope de lecturas y
+escrituras. Al alcanzarlo, o si Firestore responde "cuota agotada", la tienda se detiene en
+orden: lo guardado queda, la corrida cuenta como parcial y la siguiente continúa.
 """
 
 from __future__ import annotations
@@ -21,8 +25,9 @@ import os
 from datetime import datetime, timezone
 
 from firebase_admin import firestore
+from google.api_core.exceptions import ResourceExhausted
 from google.cloud.firestore_v1.base_query import FieldFilter
-from scrapy.exceptions import DropItem
+from scrapy.exceptions import CloseSpider, DropItem
 
 from app.catalog import flatten_categories
 from app.firebase_client import get_db
@@ -31,7 +36,9 @@ from app.models.offer import ScrapedOffer
 from app.normalizers.text import word_tokens
 from app.pipelines.base import CrawlerAwarePipeline
 from app.postprocess.alerts import evaluate_alerts
+from app.pipelines.job_errors import record_error
 from app.postprocess.summary import refresh_summaries
+from app.quota import QuotaTracker
 
 TRACKED_FIELDS = ("currentPriceCents", "availability", "currentShippingCents")
 # Si alguno de estos cambia, la publicación se reescribe (aunque el precio sea el mismo).
@@ -96,6 +103,12 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.batch = None
         self.pending_writes = 0
         self.write_all = False
+        self.quota: QuotaTracker | None = None
+        self.reads = 0
+        self.writes = 0
+        self.deletes = 0
+        self.stopped_by_quota = False
+        self.skipped_by_quota = False
         self.counters = {"found": 0, "saved": 0, "changed": 0, "matched": 0, "pending": 0, "unmatched": 0,
                          "gone": 0, "duplicates": 0, "written": 0, "unchanged": 0,
                          "possible_duplicates": 0}
@@ -104,17 +117,31 @@ class FirestorePipeline(CrawlerAwarePipeline):
         spider = self.spider
         self.db = get_db()
         store_code = spider.store_code
+        self.started = datetime.now(timezone.utc)
+        self.quota = QuotaTracker(self.db)
         store_doc = self.db.collection("stores").document(store_code).get()
+        self.reads += 1
         self.store_name = (store_doc.to_dict() or {}).get("name", store_code)
         self.matcher = ProductMatcher(self.db, {c["slug"] for c in flatten_categories()})
         # Una sola consulta con todas las publicaciones de la tienda (en vez de una lectura por oferta).
         query = self.db.collection("storeProducts").where(filter=FieldFilter("storeCode", "==", store_code))
+        # Contarlas cuesta 1 lectura por cada 1000: si leerlas no cabe en el presupuesto, no se corre.
+        count = int(query.count().get()[0][0].value)
+        self.reads += 1 + count // 1000
+        if self.quota.budget.exhausted or count > self.quota.budget.reads - 1000:
+            self.skipped_by_quota = True
+            spider.not_due = True  # no se hacen solicitudes a la tienda
+            spider.logger.warning(
+                "%s: presupuesto diario de Firestore insuficiente (quedan %s lecturas y %s escrituras; la tienda "
+                "tiene %s publicaciones). Se intenta en la próxima corrida.",
+                store_code, self.quota.budget.reads, self.quota.budget.writes, count)
+            raise CloseSpider("quota_budget")
         self.existing = {snap.id: snap.to_dict() or {} for snap in query.stream()}
+        self.reads += max(1, len(self.existing))
         # En corridas parciales (max_pages) no se registra lastCompleteRunAt: se escriben todas.
         self.write_all = getattr(spider, "max_pages", None) is not None
         self.batch = self.db.batch()
 
-        self.started = datetime.now(timezone.utc)
         job_id = f"{store_code}_{self.started.strftime('%Y%m%dT%H%M%SZ')}"
         self.job_ref = self.db.collection("scrapingJobs").document(job_id)
         self.job_ref.set({
@@ -124,8 +151,45 @@ class FirestorePipeline(CrawlerAwarePipeline):
             "startedAt": self.started,
             "runUrl": os.getenv("RUN_URL"),
         })
+        self.writes += 1
+
+    # ---- Presupuesto diario ----
+
+    def _used(self) -> tuple[int, int]:
+        return (int(self.reads + (self.matcher.reads if self.matcher else 0)),
+                self.writes + self.pending_writes + (self.matcher.writes if self.matcher else 0))
+
+    def _over_budget(self) -> bool:
+        reads, writes = self._used()
+        budget = self.quota.budget
+        return reads >= budget.reads or writes >= budget.writes - 300
+
+    def _stop_for_quota(self, message: str) -> None:
+        if self.stopped_by_quota:
+            return
+        self.stopped_by_quota = True
+        spider = self.spider
+        spider.stopped_early = True
+        record_error(spider, "WARNING", message)
+        spider.logger.warning(message)
+        self.crawler.engine.close_spider(spider, "quota_budget")
 
     def process_item(self, item: ScrapedOffer, spider=None):
+        if self.stopped_by_quota:
+            raise DropItem("corrida detenida por el presupuesto diario")
+        if self._over_budget():
+            reads, writes = self._used()
+            self._stop_for_quota(f"Presupuesto diario de Firestore alcanzado ({reads} lecturas, {writes} escrituras "
+                                 f"en esta corrida): se guarda lo procesado y la tienda continúa en la próxima.")
+            raise DropItem("presupuesto diario alcanzado")
+        try:
+            return self._process(item)
+        except ResourceExhausted:
+            self._stop_for_quota("Firestore respondió 'cuota agotada' (429): la tienda se detiene y continúa "
+                                 "cuando se reinicie la cuota (medianoche del Pacífico, 03:00 en Lima).")
+            raise DropItem("cuota de Firestore agotada")
+
+    def _process(self, item: ScrapedOffer):
         self.counters["found"] += 1
         if item.doc_id in self.seen:
             # El mismo SKU listado en dos categorías (por ejemplo, Laptops y Laptops Gamer).
@@ -137,6 +201,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
         changed = has_changed(previous, data)
 
         decision = self.matcher.match(item, previous)
+        retried_unmatched = bool(self.matcher.last_attempted and previous
+                                 and previous.get("matchStatus") == "UNMATCHED")
         if previous and previous.get("title") != item.title:
             self.matcher.refresh_owned_name(item, decision.product_id)
         # Completar identificadores del producto: solo si la oferta es nueva, cambió sus códigos o
@@ -156,6 +222,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
             "possibleDuplicateOf": duplicate_of,
             "keysSynced": keys_synced,
         })
+        if self.matcher.last_attempted:
+            data["matchAttemptedAt"] = item.checked_at
         self.counters[{"MATCHED_AUTO": "matched", "MATCHED_MANUAL": "matched",
                        "PENDING_REVIEW": "pending"}.get(decision.status, "unmatched")] += 1
 
@@ -173,7 +241,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
 
         self.seen.add(item.doc_id)
         self.counters["saved"] += 1
-        if not (self.write_all or needs_write(previous, data)):
+        # Un reintento sin pareja se guarda igual (su fecha evita repetirlo en cada corrida).
+        if not (self.write_all or retried_unmatched or needs_write(previous, data)):
             # Sin cambios: no se escribe; la verificación la registra lastCompleteRunAt de la tienda.
             self.counters["unchanged"] += 1
             return item
@@ -204,6 +273,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
     def _flush(self) -> None:
         if self.pending_writes:
             self.batch.commit()
+            self.writes += self.pending_writes
         self.batch, self.pending_writes = self.db.batch(), 0
 
     def _mark_missing(self, store_code: str) -> None:
@@ -213,14 +283,25 @@ class FirestorePipeline(CrawlerAwarePipeline):
         for doc_id, data in self.existing.items():
             if doc_id in self.seen or data.get("status") != "ACTIVE":
                 continue
-            missed = int(data.get("missedRuns", 0)) + 1
-            update = {"missedRuns": missed, "updatedAt": firestore.SERVER_TIMESTAMP}
-            if missed >= GONE_AFTER_MISSED_RUNS:
-                update["status"] = "GONE"
+            ref = self.db.collection("storeProducts").document(doc_id)
+            if data.get("matchStatus") in ("UNMATCHED", "PENDING_REVIEW"):
+                # Nunca aportó precio a un producto: se borra (los borrados tienen su propia cuota)
+                # en vez de gastar 3 escrituras hasta marcarla GONE. Si vuelve, se procesa como nueva.
+                batch.delete(ref)
+                self.deletes += 1
                 self.counters["gone"] += 1
-                if data.get("productId"):
-                    self.affected_products.add(data["productId"])
-            batch.update(self.db.collection("storeProducts").document(doc_id), update)
+            else:
+                if self._used()[1] >= self.quota.budget.writes - 200:
+                    continue  # sin presupuesto: se marca en la próxima corrida completa
+                missed = int(data.get("missedRuns", 0)) + 1
+                update = {"missedRuns": missed, "updatedAt": firestore.SERVER_TIMESTAMP}
+                if missed >= GONE_AFTER_MISSED_RUNS:
+                    update["status"] = "GONE"
+                    self.counters["gone"] += 1
+                    if data.get("productId"):
+                        self.affected_products.add(data["productId"])
+                batch.update(ref, update)
+                self.writes += 1
             pending += 1
             if pending >= 400:
                 batch.commit()
@@ -230,6 +311,9 @@ class FirestorePipeline(CrawlerAwarePipeline):
 
     def close_spider(self, spider=None):
         spider = self.spider
+        if self.skipped_by_quota:
+            self.quota.record(self.reads, 0)
+            return
         if getattr(spider, "not_due", False):
             self.job_ref.delete()  # no se hizo ninguna solicitud: no se registra corrida
             return
@@ -249,7 +333,9 @@ class FirestorePipeline(CrawlerAwarePipeline):
         summaries = refresh_summaries(self.db, self.affected_products)
         alerts = evaluate_alerts(self.db, self.affected_products)
 
-        if stopped_early:
+        if self.stopped_by_quota:
+            status = "QUOTA_LIMITED"
+        elif stopped_early:
             status = "PARTIAL" if self.counters["saved"] else "FAILED"
         else:
             status = "SUCCESS" if not errors else ("PARTIAL" if self.counters["saved"] else "FAILED")
@@ -284,4 +370,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.db.collection("stores").document(spider.store_code).set(
             {"lastRunAt": finished, "lastRunStatus": status}, merge=True
         )
-        spider.logger.info("Job %s terminado: %s %s", self.job_ref.id, status, self.counters)
+        reads, writes = self._used()
+        writes += summaries + 3  # resúmenes, job y tienda (estimado)
+        self.quota.record(reads + summaries * 2, writes, self.deletes)
+        spider.logger.info("Job %s terminado: %s %s (Firestore: %s lecturas, %s escrituras, %s borrados)",
+                           self.job_ref.id, status, self.counters, reads, writes, self.deletes)

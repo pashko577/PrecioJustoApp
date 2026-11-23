@@ -1307,9 +1307,27 @@ La viabilidad jurídica y contractual deberá evaluarse individualmente para cad
 | Las publicaciones de la tienda se leen en **una consulta** al inicio; la detección de retiradas las reutiliza | Sin lecturas extra; la corrida es mucho más rápida |
 | Escrituras en lotes de 400 | Menos viajes de red |
 | El corrector de nombres solo actúa si el título cambió (1 lectura) | Evita leer categorías completas |
-| Frecuencia por tienda: Coolbox cada 6 h; Plaza Vea, Oechsle, Promart, Efe y La Curacao cada 12 h (vigencia 24 h) | Menos corridas en tiendas grandes |
+| Frecuencia: Coolbox cada 12 h y las demás tiendas cada 24 h (vigencia 24 h y 36 h). Alcance: los primeros 200 productos por categoría en VTEX y 6 páginas en tiendas HTML | Lecturas diarias dentro del plan gratuito con 13 tiendas |
 
 La app y el motor usan la misma regla: una oferta con `missedRuns == 0` está verificada en `max(lastCheckedAt, stores.lastCompleteRunAt)`.
+
+#### Presupuesto diario (incidente del 23-11-2026)
+
+La primera carga completa de Plaza Vea guardó 7 200 publicaciones (≈ 4 escrituras cada una) y agotó
+las 20 000 escrituras diarias del plan Spark: el resto de tiendas falló con `429 Quota exceeded`.
+Mientras la cuota está agotada, **la app tampoco puede leer ni escribir** hasta la medianoche del
+Pacífico (03:00 en Lima). Medidas:
+
+| Medida | Detalle |
+|---|---|
+| Presupuesto del motor | `app/quota.py`: el motor usa como máximo 38 000 lecturas y 15 000 escrituras por día (el resto queda para la app) y cada tienda como máximo 9 000 / 3 500 por corrida. El consumo se acumula en `system/quota-AAAA-MM-DD` (día del Pacífico) |
+| Detención ordenada | Al llegar al tope, o si Firestore responde 429, la tienda se detiene: lo procesado queda guardado, la corrida es `QUOTA_LIMITED` (parcial: no marca desaparecidos ni `lastCompleteRunAt`) y la siguiente continúa |
+| Sin presupuesto, no corre | Antes de leer las publicaciones de una tienda se cuentan (1 lectura por cada 1 000); si no caben, no se hace ninguna solicitud a la tienda |
+| Alcance por categoría | `maxPagesPerCategory` en `stores.json` (por defecto 4 páginas VTEX de 50 = 200 productos; 6 páginas en tiendas HTML). Las corridas con este alcance siguen siendo completas |
+| Reintentos espaciados | Una publicación sin pareja se vuelve a intentar cada 3 días (o antes si cambian su título o sus códigos) |
+| Limpieza barata | Una publicación que desaparece y nunca aportó precio (sin asociar o en revisión) se **borra** (los borrados tienen su propia cuota) en vez de gastar 3 escrituras |
+
+La primera carga de las 13 tiendas toma unos días: cada corrida avanza hasta su tope y la siguiente continúa.
 
 ### 14.4. Presupuesto diario estimado del MVP
 

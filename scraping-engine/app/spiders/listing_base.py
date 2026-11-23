@@ -25,6 +25,8 @@ from app.spiders.vtex.base import is_due
 
 STOP_STATUSES = (403, 429, 503)
 MAX_PAGES_PER_CATEGORY = 60  # tope de seguridad
+# Alcance normal por categoría (cuota gratuita de Firestore); configurable por tienda.
+DEFAULT_SCOPE_PAGES = 6
 STORES_FILE = Path(__file__).resolve().parents[1] / "data" / "stores.json"
 
 # Página de desafío de Cloudflare. No confundir con el script pasivo
@@ -43,6 +45,7 @@ class ListingSpider(scrapy.Spider):
     store_code: str = ""
     base_url: str = ""
     categories: dict[str, str] = {}
+    scope_pages: int = DEFAULT_SCOPE_PAGES
 
     handle_httpstatus_list = list(STOP_STATUSES)
     custom_settings = {
@@ -83,6 +86,8 @@ class ListingSpider(scrapy.Spider):
         return is_due(snap.to_dict() if snap.exists else None)
 
     async def start(self):
+        if getattr(self, "not_due", False):  # el pipeline decidió no correr (presupuesto diario)
+            return
         if not self._store_is_due():
             self.not_due = True
             self.logger.info("%s: todavía no toca según su frecuencia; no se hacen solicitudes.", self.store_code)
@@ -110,7 +115,7 @@ class ListingSpider(scrapy.Spider):
             yield offer
 
         per_page = max(len(offers) + len(warnings), 1)
-        within_limit = page < (self.max_pages or MAX_PAGES_PER_CATEGORY)
+        within_limit = page < min(self.max_pages or self.scope_pages, MAX_PAGES_PER_CATEGORY)
         if offers and total and page * per_page < total and within_limit:
             yield self.make_request(path, slug, page + 1)
 
@@ -134,6 +139,7 @@ def build_spider_class(store: dict, base: type[ListingSpider], module: str) -> t
         "base_url": store["baseUrl"].rstrip("/"),
         "allowed_domains": [urlparse(store["baseUrl"]).netloc],
         "categories": dict(store.get("categoryPaths") or {}),
+        "scope_pages": int(store.get("maxPagesPerCategory") or DEFAULT_SCOPE_PAGES),
     })
 
 

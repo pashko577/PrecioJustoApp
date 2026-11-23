@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 from urllib.parse import urlparse
 
-from app.spiders.vtex.base import VtexSpider
+from app.spiders.vtex.base import DEFAULT_SCOPE_PAGES, VtexSpider
 
 STORES_FILE = Path(__file__).resolve().parents[2] / "data" / "stores.json"
 
@@ -31,6 +31,7 @@ def build_spider_class(store: dict) -> type[VtexSpider]:
         "allowed_domains": [urlparse(store["baseUrl"]).netloc],
         "categories": dict(store.get("vtexCategories") or {}),
         "internal_sellers": tuple(store.get("vtexInternalSellers") or ()),
+        "scope_pages": int(store.get("maxPagesPerCategory") or DEFAULT_SCOPE_PAGES),
     })
 
 

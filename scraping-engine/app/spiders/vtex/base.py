@@ -27,6 +27,9 @@ from app.normalizers.text import normalize_text, word_tokens
 from app.pipelines.job_errors import record_error
 
 PAGE_SIZE = 50          # máximo que permite VTEX por solicitud
+# Alcance por categoría: los primeros 200 productos (los más relevantes según la tienda). Leer
+# catálogos completos (Plaza Vea: 7 200 publicaciones) no cabe en la cuota gratuita de Firestore.
+DEFAULT_SCOPE_PAGES = 4
 MAX_OFFSET = 2500       # VTEX no permite paginar más allá de este índice
 STOP_STATUSES = (403, 429)
 # Margen para que una corrida programada no se salte por unos minutos de diferencia del cron.
@@ -199,6 +202,7 @@ class VtexSpider(scrapy.Spider):
     # Ruta de categoría VTEX (ids, por ejemplo "/47/65/") -> slug de nuestra categoría.
     categories: dict[str, str] = {}
     internal_sellers: tuple[str, ...] = ()  # prefijos de sellerId que son la propia tienda
+    scope_pages: int = DEFAULT_SCOPE_PAGES  # alcance normal (la corrida sigue siendo completa)
 
     handle_httpstatus_list = list(STOP_STATUSES)
     custom_settings = {
@@ -237,6 +241,8 @@ class VtexSpider(scrapy.Spider):
         return is_due(snap.to_dict() if snap.exists else None)
 
     async def start(self):
+        if getattr(self, "not_due", False):  # el pipeline decidió no correr (presupuesto diario)
+            return
         if not self._store_is_due():
             self.not_due = True
             self.logger.info("%s: todavía no toca según su frecuencia; no se hacen solicitudes.", self.store_code)
@@ -274,6 +280,6 @@ class VtexSpider(scrapy.Spider):
         total = parse_total(response.headers.get("resources"))
         next_offset = offset + PAGE_SIZE
         page_number = offset // PAGE_SIZE + 1
-        within_limit = self.max_pages is None or page_number < self.max_pages
+        within_limit = page_number < (self.max_pages or self.scope_pages)
         if products and total and next_offset < min(total, MAX_OFFSET) and within_limit:
             yield self.make_request(category_path, slug, next_offset)

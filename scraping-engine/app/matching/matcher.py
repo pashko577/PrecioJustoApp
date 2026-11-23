@@ -12,6 +12,8 @@ de los dos queda como UNMATCHED o PENDING_REVIEW para revisión manual (regla RN
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
@@ -21,6 +23,16 @@ from app.matching.scoring import Candidate, Listing, MatchDecision, decide
 from app.models.offer import ScrapedOffer
 
 KEEP_STATUSES = {"MATCHED_AUTO", "MATCHED_MANUAL", "REJECTED", "PENDING_REVIEW"}
+# Una publicación sin pareja se vuelve a intentar cada 3 días (o antes si cambian su título o
+# sus códigos): cada intento cuesta lecturas y la mayoría sigue sin pareja.
+UNMATCHED_RETRY = timedelta(days=3)
+
+
+def should_retry_unmatched(offer: ScrapedOffer, existing: dict, now: datetime) -> bool:
+    if existing.get("title") != offer.title or (existing.get("identifiers") or {}) != offer.identifiers:
+        return True
+    attempted = existing.get("matchAttemptedAt")
+    return attempted is None or now - attempted >= UNMATCHED_RETRY
 
 
 def candidate_from_doc(product_id: str, data: dict) -> Candidate:
@@ -49,12 +61,19 @@ class ProductMatcher:
         self.renamed_products = 0
         self.enriched_products = 0
         self.created_products = 0
+        # Operaciones de Firestore estimadas (presupuesto diario del plan gratuito).
+        self.reads = 0
+        self.last_attempted = False
+        self.writes = 0
+        self._missing_keys: set[str] = set()  # identificadores ya buscados sin resultado
 
     def _load_category(self, slug: str) -> dict[str, Candidate]:
         if slug not in self._by_category:
             snaps = self.db.collection("products").where(filter=FieldFilter("categorySlug", "==", slug)).stream()
             loaded = {}
+            self.reads += 1  # una consulta cuesta al menos 1 lectura aunque no devuelva nada
             for snap in snaps:
+                self.reads += 1
                 data = snap.to_dict() or {}
                 loaded[snap.id] = candidate_from_doc(snap.id, data)
                 if source := data.get("source"):
@@ -68,20 +87,30 @@ class ProductMatcher:
         """Busca un producto por identificador (`GTIN:...` o `MPN:...`), primero en caché."""
         if key in self._by_key:
             return self._by_key[key]
+        if key in self._missing_keys:
+            return None
         snaps = list(
             self.db.collection("products")
             .where(filter=FieldFilter("identifierKeys", "array_contains", key)).limit(1).stream()
         )
+        self.reads += 1
         if snaps:
             self._by_key[key] = snaps[0].id
             return snaps[0].id
+        self._missing_keys.add(key)
         return None
 
     def match(self, offer: ScrapedOffer, existing: dict | None) -> MatchDecision:
         """Decide la asociación de una publicación. Respeta decisiones previas."""
+        self.last_attempted = False
         if existing and existing.get("matchStatus") in KEEP_STATUSES:
             return MatchDecision(existing.get("productId"), existing["matchStatus"], existing.get("matchScore"),
                                  existing.get("matchReason") or "decisión previa")
+        if (existing and existing.get("matchStatus") == "UNMATCHED"
+                and not should_retry_unmatched(offer, existing, offer.checked_at)):
+            return MatchDecision(None, "UNMATCHED", existing.get("matchScore"),
+                                 existing.get("matchReason") or "sin coincidencia")
+        self.last_attempted = True
 
         gtin = offer.identifiers.get("GTIN")
         mpn = offer.identifiers.get("MPN")
@@ -130,8 +159,10 @@ class ProductMatcher:
                 "identifierKeys": firestore.ArrayUnion(new_keys),
                 "updatedAt": firestore.SERVER_TIMESTAMP,
             })
+            self.writes += 1
             for key in new_keys:
                 self._by_key[key] = product_id
+                self._missing_keys.discard(key)
             self.enriched_products += 1
         return None
 
@@ -145,6 +176,7 @@ class ProductMatcher:
         if not product_id:
             return False
         snap = self.db.collection("products").document(product_id).get()
+        self.reads += 1
         if not snap.exists:
             return False
         data = snap.to_dict() or {}
@@ -162,8 +194,13 @@ class ProductMatcher:
         cached = self._by_category.get(data.get("categorySlug", ""), {}).get(product_id)
         if cached:
             cached.name = offer.title
+        self.writes += 1
         self.renamed_products += 1
         return True
+
+    def _exists(self, product_id: str) -> bool:
+        self.reads += 1
+        return self.db.collection("products").document(product_id).get().exists
 
     def _create_product(self, offer: ScrapedOffer, slug: str) -> str | None:
         identifiers: dict[str, list[str]] = {}
@@ -174,7 +211,7 @@ class ProductMatcher:
         suffix = gtin or slugify(mpn or offer.external_product_id)
         base_id = slugify(f"{offer.brand or ''} {offer.model or offer.title}")[:80].strip("-") or slugify(offer.title)[:80]
         product_id = base_id
-        if product_id in self._load_category(slug) or self.db.collection("products").document(product_id).get().exists:
+        if product_id in self._load_category(slug) or self._exists(product_id):
             product_id = f"{base_id[:60]}-{suffix}"[:100].strip("-")
         try:
             _, data = build_product_doc(ProductInput(
@@ -195,9 +232,11 @@ class ProductMatcher:
             "updatedAt": firestore.SERVER_TIMESTAMP,
         })
         self.db.collection("products").document(product_id).set(data)
+        self.writes += 1
         self._by_category.setdefault(slug, {})[product_id] = candidate_from_doc(product_id, data)
         self._owned_by[offer.doc_id] = product_id
         for key in data.get("identifierKeys", []):
             self._by_key[key] = product_id
+            self._missing_keys.discard(key)
         self.created_products += 1
         return product_id
