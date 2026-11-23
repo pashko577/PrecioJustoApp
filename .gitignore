@@ -1,0 +1,28 @@
+# Secretos: NUNCA subir
+service-account*.json
+*-firebase-adminsdk-*.json
+.env
+.env.*
+!.env.example
+
+# Python
+scraping-engine/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.scrapy/
+
+# Node
+node_modules/
+
+# Firebase
+.firebase/
+*-debug.log
+firebase-export-*/
+emulator-data/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

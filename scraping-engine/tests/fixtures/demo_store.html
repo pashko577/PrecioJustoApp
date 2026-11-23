@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!-- Página FICTICIA para pruebas. No representa ninguna tienda real. -->
+<html lang="es">
+<head><meta charset="utf-8"><title>Tienda Demo</title></head>
+<body>
+  <main class="catalog">
+    <article class="product" data-sku="KNV3-1TB">
+      <a class="product-link" href="https://demo.example.com/p/KNV3-1TB">
+        <h2 class="product-title">SSD Kingston NV3 1TB PCIe 4.0 NVMe</h2>
+      </a>
+      <span class="brand">Kingston</span>
+      <span class="price">S/ 249.90</span>
+      <span class="stock" data-status="in_stock">Disponible</span>
+      <span class="shipping">S/ 10.00</span>
+      <span class="ean">0740617340456</span>
+      <img class="thumb" src="https://demo.example.com/img/knv3.jpg" alt="">
+    </article>
+
+    <article class="product" data-sku="KNV3-2TB">
+      <a class="product-link" href="https://demo.example.com/p/KNV3-2TB">
+        <h2 class="product-title">Disco sólido Kingston NV3 de 2000 GB</h2>
+      </a>
+      <span class="brand">Kingston</span>
+      <span class="price">S/ 1,249.90</span>
+      <span class="stock" data-status="out_of_stock">Agotado</span>
+    </article>
+
+    <article class="product" data-sku="SAM-990-1TB">
+      <a class="product-link" href="https://demo.example.com/p/SAM-990-1TB">
+        <h2 class="product-title">Samsung 990 EVO Plus 1TB</h2>
+      </a>
+      <span class="brand">Samsung</span>
+      <span class="price">S/ 389</span>
+      <span class="stock" data-status="preorder">Preventa</span>
+      <span class="shipping">Gratis</span>
+    </article>
+
+    <!-- Caso inválido: precio no legible -->
+    <article class="product" data-sku="BROKEN-1">
+      <a class="product-link" href="https://demo.example.com/p/BROKEN-1">
+        <h2 class="product-title">Producto con precio roto</h2>
+      </a>
+      <span class="price">Consultar</span>
+      <span class="stock" data-status="in_stock">Disponible</span>
+    </article>
+  </main>
+</body>
+</html>

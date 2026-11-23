@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// PRECIO JUSTO - Reglas de seguridad de Firestore (ver PRECIO_JUSTO.md, sección 11)
+// El motor de scraping usa el Admin SDK y NO pasa por estas reglas.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function data() { return request.resource.data; }
+    function changed() { return data().diff(resource.data).affectedKeys(); }
+    function isShortString(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+
+    // ---------- Catálogo público (lectura para todos, escritura solo admin) ----------
+    match /categories/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /products/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /stores/{id}     { allow read: if true; allow write: if isAdmin(); }
+    match /config/{id}     { allow read: if true; allow write: if isAdmin(); }
+
+    match /storeProducts/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+      match /history/{month} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // ---------- Operación interna (solo admin lee; solo el motor escribe) ----------
+    match /scrapingJobs/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /auditLogs/{id}    { allow read: if isAdmin(); allow write: if false; }
+
+    // ---------- Datos del usuario (solo el dueño) ----------
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      // El plan solo lo cambia un admin (o el motor con Admin SDK).
+      allow create: if isOwner(uid) && data().plan == 'FREE';
+      allow update: if isOwner(uid) && !changed().hasAny(['plan', 'createdAt']);
+      allow delete: if isOwner(uid);
+
+      match /favorites/{productId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && data().productId == productId;
+      }
+
+      match /wishlists/{listId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && isShortString(data().name, 120)
+          && data().productIds is list
+          && data().productIds.size() <= 100;
+      }
+
+      match /alerts/{alertId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && data().targetPriceCents is int
+          && data().targetPriceCents > 0
+          && data().currency == 'PEN'
+          && data().condition == 'AT_OR_BELOW'
+          && data().status in ['ACTIVE', 'PAUSED'];
+      }
+
+      match /devices/{deviceId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /notifications/{notificationId} {
+        allow read, delete: if isOwner(uid);
+        allow create: if false;
+        allow update: if isOwner(uid) && changed().hasOnly(['readAt']);
+      }
+    }
+  }
+}
