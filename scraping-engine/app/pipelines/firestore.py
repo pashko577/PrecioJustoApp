@@ -81,6 +81,10 @@ def needs_write(previous: dict | None, current: dict) -> bool:
     """¿Hay que escribir la publicación? Solo si es nueva, volvió, o cambió algo material."""
     if previous is None or previous.get("status") != "ACTIVE" or previous.get("missedRuns", 0) != 0:
         return True
+    # La foto solo fuerza una escritura cuando aparece por primera vez: algunas tiendas cambian
+    # parámetros de la URL de la imagen y reescribir por eso gastaría cuota en cada corrida.
+    if current.get("imageUrl") and not previous.get("imageUrl"):
+        return True
     return any(previous.get(f) != current.get(f) for f in MATERIAL_FIELDS)
 
 

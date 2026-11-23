@@ -19,6 +19,7 @@ from app.normalizers.brands import detect_brand
 from app.normalizers.identifiers import canonical_mpn
 from app.normalizers.price import number_to_cents
 from app.spiders.listing_base import REFURBISHED_RE, ListingSpider
+from app.spiders.images import first_image_url
 
 _LIST_START_RE = re.compile(r'<ol class="[^"]*\bproducts list items product-items')
 _ITEM_SPLIT = re.compile(r'<li class="item product product-item')
@@ -84,7 +85,7 @@ def parse_listing(page_html: str, *, store_code: str, category_slug: str | None,
             identifiers={"MPN": canonical_mpn(model)} if canonical_mpn(model) else {},
             category_hint=category_slug,
             product_url=url,
-            image_url=None,
+            image_url=first_image_url(chunk),
             checked_at=checked_at,
         ))
     return offers, warnings, total

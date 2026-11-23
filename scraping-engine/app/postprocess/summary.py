@@ -13,6 +13,10 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from app.catalog import NO_PRICE_SORT_VALUE
 
 DEFAULT_FRESHNESS_MINUTES = 12 * 60
+# Una bajada se anuncia («Bajó X %») solo durante estos días desde que la observamos.
+PRICE_DROP_WINDOW_DAYS = 7
+# Bajadas mayores suelen ser errores de lectura de la tienda: no se anuncian.
+MAX_PLAUSIBLE_DROP_PERCENT = 80
 # Estados de asociación que se muestran como precio del producto (la app usa la misma lista).
 SHOWN_MATCH_STATUSES = ("MATCHED_AUTO", "MATCHED_MANUAL")
 
@@ -28,6 +32,32 @@ def effective_checked_at(offer: dict, store: dict | None) -> datetime | None:
     if run is not None and offer.get("missedRuns", 0) == 0 and offer.get("status", "ACTIVE") == "ACTIVE":
         return max(checked, run) if checked else run
     return checked
+
+
+def price_drop(best: dict | None, verified: list[dict], now: datetime) -> dict:
+    """Bajada reciente del mejor precio del producto, según precios OBSERVADOS por nosotros.
+
+    Nunca usa el precio «normal» que publica la tienda (`listPriceCents`). Compara el precio
+    actual de la oferta más barata con el mejor precio que el producto tenía antes de ese cambio:
+    el anterior de esa oferta o, si era menor, el actual de otra tienda vigente.
+    """
+    none = {"priceDropFromCents": None, "priceDropPercent": None, "priceDroppedAt": None}
+    if not best:
+        return none
+    previous, changed_at = best.get("previousPriceCents"), best.get("lastChangedAt")
+    current = best["currentPriceCents"]
+    if not previous or not changed_at or previous <= current:
+        return none
+    if now - changed_at > timedelta(days=PRICE_DROP_WINDOW_DAYS):
+        return none
+    others = [o["currentPriceCents"] for o in verified if o is not best]
+    reference = min([previous, *others])
+    if reference <= current:
+        return none
+    percent = round((reference - current) * 100 / reference)
+    if percent < 1 or percent > MAX_PLAUSIBLE_DROP_PERCENT:
+        return none
+    return {"priceDropFromCents": reference, "priceDropPercent": percent, "priceDroppedAt": changed_at}
 
 
 def compute_summary(offers: list[dict], stores: dict[str, dict], now: datetime | None = None) -> dict:
@@ -64,7 +94,25 @@ def compute_summary(offers: list[dict], stores: dict[str, dict], now: datetime |
         "offerCount": len(active),
         "verifiedOfferCount": len(verified),
         "lastCheckedAt": max(checks) if checks else None,
+        # Campos siempre presentes (también en None): el guardado con merge no debe dejar
+        # una bajada antigua colgada en el resumen.
+        **price_drop(best, verified, now),
     }
+
+
+def product_image(offers: list[dict]) -> str | None:
+    """Foto del producto: la de su oferta confirmada más antigua que tenga foto.
+
+    Estable entre corridas (no cambia de tienda en tienda) y completa los productos creados
+    antes de que su tienda publicara fotos, sin lecturas extra.
+    """
+    with_image = [o for o in offers if o.get("imageUrl") and o.get("status", "ACTIVE") == "ACTIVE"
+                  and o.get("matchStatus", "MATCHED_AUTO") in SHOWN_MATCH_STATUSES]
+    if not with_image:
+        return None
+    far_future = datetime.max.replace(tzinfo=timezone.utc)
+    oldest = min(with_image, key=lambda o: (o.get("createdAt") or far_future, o.get("storeCode") or ""))
+    return oldest["imageUrl"]
 
 
 def store_info(db) -> dict[str, dict]:
@@ -81,11 +129,12 @@ def refresh_summaries(db, product_ids: set[str]) -> int:
         offers = [
             s.to_dict() for s in db.collection("storeProducts").where(filter=FieldFilter("productId", "==", pid)).stream()
         ]
+        data = {"summary": compute_summary(offers, stores), "updatedAt": firestore.SERVER_TIMESTAMP}
+        image = product_image(offers)
+        if image:  # sin foto no se borra la que ya tenga el producto
+            data["imageUrl"] = image
         # set+merge: no falla si el producto ya no existe (un update haría fallar todo el lote).
-        batch.set(db.collection("products").document(pid), {
-            "summary": compute_summary(offers, stores),
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-        }, merge=True)
+        batch.set(db.collection("products").document(pid), data, merge=True)
         pending += 1
         updated += 1
         if pending >= 400:

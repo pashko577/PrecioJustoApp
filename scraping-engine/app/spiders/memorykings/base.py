@@ -20,6 +20,7 @@ from app.models.offer import ScrapedOffer
 from app.normalizers.brands import detect_brand
 from app.spiders.listing_base import REFURBISHED_RE, ListingSpider
 from app.spiders.prestashop.base import availability_from_stock, soles_cents
+from app.spiders.images import first_image_url
 
 _CARD_RE = re.compile(r'<a href="((?:https://www\.memorykings\.pe)?/producto/(\d+)/[^"]+)"')
 _TITLE_RE = re.compile(r"<h4[^>]*>([^<]+)</h4>")
@@ -87,7 +88,7 @@ def parse_listing(page_html: str, *, store_code: str, category_slug: str | None,
             identifiers={},
             category_hint=category_slug,
             product_url=url,
-            image_url=None,
+            image_url=first_image_url(chunk, BASE),
             checked_at=checked_at,
         ))
     return offers, warnings, total

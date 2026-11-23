@@ -23,6 +23,7 @@ from app.normalizers.identifiers import canonical_mpn
 from app.normalizers.price import parse_price_to_cents
 from app.spiders.listing_base import REFURBISHED_RE, ListingSpider
 from app.spiders.vtex.base import looks_like_model_code
+from app.spiders.images import first_image_url
 
 _ARTICLE_RE = re.compile(r'<article[^>]*data-id-product="(\d+)"')
 # Dos temas: SercoPlus "<div class=product-title><a><h6>Título</h6></a>" e
@@ -119,7 +120,7 @@ def parse_listing(page_html: str, *, store_code: str, category_slug: str | None,
             identifiers={"MPN": canonical_mpn(model)} if canonical_mpn(model) else {},
             category_hint=category_slug,
             product_url=url,
-            image_url=None,
+            image_url=first_image_url(chunk),
             checked_at=checked_at,
         ))
     return offers, warnings, total
