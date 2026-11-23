@@ -1286,7 +1286,7 @@ Establecer la estructura inicial de PRECIO JUSTO, preparar el entorno de desarro
 
 *Como desarrollador, quiero una estructura organizada para trabajar de manera independiente en cada componente.*
 
-- [ ] Existe el repositorio en GitHub (privado).
+- [x] Existe el repositorio en GitHub.
 - [x] Están separados `mobile_app` y `scraping-engine`, con la configuración de Firebase en la raíz.
 - [x] Existe un README con instrucciones de instalación.
 - [x] Se puede levantar el entorno local (emuladores + app + motor).
@@ -1295,11 +1295,11 @@ Establecer la estructura inicial de PRECIO JUSTO, preparar el entorno de desarro
 
 *Como desarrollador, quiero un proyecto Firebase configurado para persistir información sin costo.*
 
-- [ ] Proyecto Firebase creado en plan **Spark** (sin cuenta de facturación).
-- [ ] Firestore creado en una región cercana a Perú (por ejemplo, `southamerica-east1`).
-- [ ] Authentication habilitado (correo y Google).
+- [x] Proyecto Firebase `precio-justo-pe` creado en plan **Spark** (sin cuenta de facturación).
+- [x] Firestore creado en `southamerica-east1` (São Paulo).
+- [x] Authentication habilitado con correo y contraseña. *(Google Sign-In pendiente)*
 - [x] Emulator Suite configurado (Auth + Firestore).
-- [ ] Reglas iniciales (sección 11.2) desplegadas y probadas en el emulador.
+- [x] Reglas iniciales (sección 11.2) desplegadas y probadas en el emulador.
 - [x] La cuenta de servicio no está en el repositorio.
 
 #### US-003. Datos de ejemplo
@@ -1327,9 +1327,9 @@ Establecer la estructura inicial de PRECIO JUSTO, preparar el entorno de desarro
 *Como usuario, quiero una app que inicie y muestre datos.*
 
 - [x] Proyecto Flutter creado (`flutter create`).
-- [ ] FlutterFire configurado (`flutterfire configure` genera `firebase_options.dart`).
+- [x] FlutterFire configurado (`flutterfire configure` genera `firebase_options.dart`).
 - [x] go_router con pantalla de inicio y detalle de producto.
-- [ ] La app se conecta a los emuladores en modo desarrollo y al proyecto real en producción.
+- [x] La app se conecta a los emuladores en modo desarrollo y al proyecto real en producción.
 - [x] La pantalla de inicio lista categorías y productos desde Firestore.
 - [x] Utilidad de formato de moneda (céntimos → `S/ 249.90`) con pruebas.
 

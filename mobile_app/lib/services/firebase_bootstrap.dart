@@ -21,8 +21,18 @@ String get emulatorHost {
 const int firestoreEmulatorPort = 8085;
 const int authEmulatorPort = 9099;
 
+/// Proyecto ficticio para los emuladores: así los datos locales nunca se mezclan con producción.
+const FirebaseOptions _emulatorOptions = FirebaseOptions(
+  apiKey: 'demo-api-key',
+  appId: '1:000000000000:android:0000000000000000',
+  messagingSenderId: '000000000000',
+  projectId: 'demo-precio-justo',
+);
+
 Future<void> initFirebase() async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: useEmulators ? _emulatorOptions : DefaultFirebaseOptions.currentPlatform,
+  );
 
   if (useEmulators) {
     FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, firestoreEmulatorPort);

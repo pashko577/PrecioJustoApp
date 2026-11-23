@@ -84,26 +84,39 @@ cd scraping-engine && .venv/Scripts/python -m pytest -q   # motor
 cd firebase-tests && npm install && npm test              # reglas (levanta el emulador solo)
 ```
 
-## Conectar con el proyecto real de Firebase (cuando toque)
+## Proyecto real de Firebase
 
-1. Crear el proyecto en https://console.firebase.google.com en **plan Spark** (no agregar facturación).
-2. Activar **Firestore** (región `southamerica-east1`) y **Authentication** (correo y Google).
-3. Iniciar sesión y vincular:
-   ```bash
-   firebase login
-   firebase use --add            # elegir el proyecto y ponerle el alias "prod"
-   firebase deploy --only firestore:rules,firestore:indexes
-   ```
-4. Generar la configuración de la app (reemplaza `lib/firebase_options.dart`):
-   ```bash
-   dart pub global activate flutterfire_cli
-   cd mobile_app && flutterfire configure
-   ```
-5. Compilar contra el proyecto real: `flutter run --dart-define=USE_EMULATORS=false`.
-6. Para el scraping en GitHub Actions: crear una cuenta de servicio (Configuración del proyecto → Cuentas de servicio → Generar clave privada) y guardar el JSON **solo** como secret `FIREBASE_SERVICE_ACCOUNT` en GitHub. **Nunca** subir ese archivo al repositorio.
+| Dato | Valor |
+|---|---|
+| ID del proyecto | `precio-justo-pe` (alias `prod` en `.firebaserc`) |
+| Consola | https://console.firebase.google.com/project/precio-justo-pe/overview |
+| Plan | Spark (gratis, sin facturación) |
+| Firestore | `(default)` en `southamerica-east1` (São Paulo), protección contra borrado activada |
+| Authentication | Correo y contraseña (Google Sign-In pendiente) |
+| Apps registradas | Android `com.preciojusto.precio_justo`, iOS `com.preciojusto.precioJusto`, Web |
+
+El alias `default` sigue apuntando al proyecto ficticio de los emuladores, así que **todo comando contra producción debe llevar `--project prod`**:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes --project prod
+```
+
+Ejecutar la app contra el proyecto real (sin emuladores):
+
+```bash
+cd mobile_app
+flutter run --dart-define=USE_EMULATORS=false
+```
+
+Si se agregan plataformas o cambian los identificadores, regenerar la configuración con
+`flutterfire configure --project=precio-justo-pe` (reemplaza `lib/firebase_options.dart` y `android/app/google-services.json`).
+
+### Pendiente para el scraping en GitHub Actions (sprint 4)
+
+Crear una cuenta de servicio (Configuración del proyecto → Cuentas de servicio → Generar clave privada) y guardar el JSON **solo** como secret `FIREBASE_SERVICE_ACCOUNT` del repositorio. **Nunca** subir ese archivo.
 
 ## Seguridad
 
-- La configuración de `firebase_options.dart` no es secreta; la protección la dan `firestore.rules`.
+- `firebase_options.dart` y `google-services.json` contienen claves de API **públicas** (no son secretas); la protección la dan `firestore.rules`. Recomendado: restringir esas claves por app en Google Cloud Console → APIs y servicios → Credenciales.
 - La cuenta de servicio del Admin SDK **sí** es secreta.
 - El spider de demostración usa una página **ficticia**. Antes de activar una tienda real, seguir la sección 7.7 del documento (términos de uso, `robots.txt`, límites).
