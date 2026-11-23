@@ -150,8 +150,10 @@ class TrackingRepository {
       'currency': 'PEN',
       'condition': 'AT_OR_BELOW',
       'status': 'ACTIVE',
-      // Al cambiar el objetivo, la alerta puede volver a avisar (RN-08).
+      // Al cambiar el objetivo, la alerta puede volver a avisar (RN-08) y el motor la evalúa
+      // en la próxima corrida aunque su producto no haya cambiado.
       'lastTriggeredPriceCents': null,
+      'evaluatedAt': null,
     };
     if (existing.docs.isNotEmpty) {
       final doc = existing.docs.first;

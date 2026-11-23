@@ -12,13 +12,14 @@ import '../features/auth/register_screen.dart';
 import '../features/catalog/home_screen.dart';
 import '../features/catalog/product_screen.dart';
 import '../features/catalog/search_screen.dart';
+import '../features/notifications/notifications.dart';
 import '../features/tracking/tracking_screens.dart';
 
 /// Pantallas de acceso: si ya hay sesión, no tiene sentido mostrarlas.
 const authPaths = {'/login', '/register', '/forgot-password'};
 
 /// Rutas que exigen sesión. Favoritos y alertas se agregarán en el sprint 7.
-const protectedPrefixes = ['/profile', '/favorites', '/alerts'];
+const protectedPrefixes = ['/profile', '/favorites', '/alerts', '/notifications'];
 
 /// Regla de redirección según la sesión. Devuelve `null` si no hay que redirigir.
 String? authRedirect({required bool loggedIn, required Uri location}) {
@@ -90,6 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
+      GoRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
     ],
   );
   ref.onDispose(router.dispose);

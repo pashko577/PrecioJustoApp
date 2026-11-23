@@ -1035,7 +1035,7 @@ Firestore indexa cada campo automáticamente. Índices compuestos necesarios (en
 | RN-05 | Disponibilidad | Valores permitidos: `AVAILABLE`, `OUT_OF_STOCK`, `PREORDER`, `UNKNOWN`. |
 | RN-06 | Productos duplicados | No se asocian publicaciones automáticamente si la coincidencia no alcanza el umbral o si aplica una regla bloqueante (sección 8). |
 | RN-07 | Historial | Se agrega un punto de historial cuando cambia precio, disponibilidad o envío. Cada verificación sin cambios actualiza `lastCheckedAt`. |
-| RN-08 | Alertas | Una alerta se activa solo con una oferta vigente y disponible cuyo precio cumpla la condición. No se repite si el precio es igual o mayor a `lastTriggeredPriceCents`; vuelve a dispararse si baja más o si el precio sube por encima del objetivo y luego vuelve a cumplirlo. |
+| RN-08 | Alertas | Una alerta se activa solo con una oferta vigente y disponible cuyo precio cumpla la condición. No se repite si el precio es igual o mayor a `lastTriggeredPriceCents`; vuelve a dispararse si baja más o si el precio sube por encima del objetivo y luego vuelve a cumplirlo. **Implementación:** la alerta sigue `ACTIVE` después de avisar (si pasara a `TRIGGERED` el motor dejaría de vigilarla); el motor evalúa al cerrar cada corrida las alertas de los productos que cambiaron y las nunca evaluadas (`evaluatedAt == null`), y nunca avisa con un precio vencido. |
 | RN-09 | Información desactualizada | Las ofertas fuera del periodo de vigencia se muestran como "desactualizadas" y no cuentan para el precio más bajo. Si una publicación no aparece en 3 corridas seguidas, pasa a `status: GONE`. |
 | RN-10 | Publicaciones comerciales | El enlace dirige a la publicación de la tienda. PRECIO JUSTO no procesa pagos ni es responsable de la transacción en su primera versión. |
 | RN-11 | Límites del plan gratuito de usuario | Favoritos, alertas y listas se limitan según `config/app.freePlanLimits` (por defecto 50, 5 y 3; 100 productos por lista). En el MVP el límite se valida en la app con un conteo agregado (1 lectura); el motor ignora alertas que excedan el límite. Premium no tiene el límite gratuito. |
@@ -1318,7 +1318,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 4 tiendas (Coolbox, Plaza Vea, Oechsle, Promart) |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | ✅ Gráfico escalonado por tienda, cifras de 30/90 días (promedio ponderado por tiempo) y tabla de datos |
 | 7 | Seguimiento | Favoritos, listas y alertas | ✅ Favoritos (con cambio de precio desde que se guardó), listas, alertas (una por producto, "¡Ya cumple!") y límites del plan gratuito |
-| 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | |
+| 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | ✅ Evaluación RN-08 tras cada corrida, bandeja con no leídas y push FCM (Android/iOS; web pendiente) |
 | 9 | Administración | Scripts de administración, revisión de coincidencias, respaldo semanal, segunda tienda | |
 | 10 | Calidad y lanzamiento | Pruebas de reglas, política de privacidad, build de producción, publicación en Google Play | |
 

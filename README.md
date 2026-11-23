@@ -99,6 +99,20 @@ En producción lo ejecuta el workflow [scrape.yml](.github/workflows/scrape.yml)
 3. **Borrar el JSON descargado** de la computadora (o guardarlo fuera del repositorio).
 4. Probar: Actions → Scraping → Run workflow (con `max_pages` = 1).
 
+## Notificaciones push
+
+El motor evalúa las alertas al cerrar cada corrida, crea la notificación en `users/{uid}/notifications` y la envía por FCM a los dispositivos registrados (respetando las preferencias del usuario). En los emuladores **no** se envían push (FCM no tiene emulador): solo se crea la notificación en la bandeja.
+
+Probar en un celular Android real (proyecto real, sin emuladores):
+
+```bash
+flutter doctor --android-licenses          # una sola vez
+cd mobile_app
+flutter run --dart-define=USE_EMULATORS=false   # con el celular conectado por USB y depuración activada
+```
+
+Al iniciar sesión, la app pide permiso de notificaciones y registra el celular. La versión web todavía no recibe push (requiere clave VAPID y service worker).
+
 ## Administración del catálogo
 
 Los scripts escriben en el **emulador** por defecto (requiere `FIRESTORE_EMULATOR_HOST`):

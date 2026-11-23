@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../models/models.dart';
 import '../../services/catalog_repository.dart';
 import '../auth/auth_providers.dart';
+import '../notifications/notifications.dart';
 import 'product_row.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -25,12 +26,7 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.favorite_border),
             onPressed: () => context.push('/favorites'),
           ),
-          IconButton(
-            key: const Key('alerts-nav'),
-            tooltip: 'Mis alertas',
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () => context.push('/alerts'),
-          ),
+          const NotificationsBell(),
           IconButton(
             key: const Key('account-button'),
             tooltip: isSignedIn ? 'Mi cuenta' : 'Iniciar sesión',

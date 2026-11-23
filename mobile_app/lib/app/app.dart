@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/notifications/notifications.dart';
+import '../services/push_service.dart';
 import 'router.dart';
 
 class PrecioJustoApp extends ConsumerWidget {
@@ -8,8 +10,11 @@ class PrecioJustoApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Registra/desregistra el celular para push según la sesión (no hace nada en emuladores ni web).
+    ref.watch(pushServiceProvider);
     return MaterialApp.router(
       title: 'PRECIO JUSTO',
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       routerConfig: ref.watch(routerProvider),

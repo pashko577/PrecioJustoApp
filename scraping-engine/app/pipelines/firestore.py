@@ -30,6 +30,7 @@ from app.matching.matcher import ProductMatcher
 from app.models.offer import ScrapedOffer
 from app.normalizers.text import word_tokens
 from app.pipelines.base import CrawlerAwarePipeline
+from app.postprocess.alerts import evaluate_alerts
 from app.postprocess.summary import refresh_summaries
 
 TRACKED_FIELDS = ("currentPriceCents", "availability", "currentShippingCents")
@@ -234,6 +235,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
                 {"lastCompleteRunAt": self.started}, merge=True
             )
         summaries = refresh_summaries(self.db, self.affected_products)
+        alerts = evaluate_alerts(self.db, self.affected_products)
 
         if stopped_early:
             status = "PARTIAL" if self.counters["saved"] else "FAILED"
@@ -259,7 +261,10 @@ class FirestorePipeline(CrawlerAwarePipeline):
             "markedGone": self.counters["gone"],
             "summariesUpdated": summaries,
             "completeRun": complete_run,
-            "alertsTriggered": 0,  # Se implementa en el sprint 8
+            "alertsEvaluated": alerts.evaluated,
+            "alertsTriggered": alerts.notified,
+            "alertsRearmed": alerts.rearmed,
+            "pushesSent": alerts.pushes_sent,
             "errors": errors,
         })
         self.db.collection("stores").document(spider.store_code).set(

@@ -20,9 +20,16 @@ int? currentBestCents(WidgetRef ref, Product? product) {
       : null;
 }
 
+String _shortDate(DateTime d) {
+  final l = d.toLocal();
+  return '${l.day.toString().padLeft(2, '0')}/${l.month.toString().padLeft(2, '0')}';
+}
+
 /// Cambio de precio desde que se guardó: texto para el usuario (`null` si no aplica).
 String? priceChangeText(int? savedCents, int? currentCents) {
-  if (savedCents == null || currentCents == null || savedCents == currentCents) {
+  if (savedCents == null ||
+      currentCents == null ||
+      savedCents == currentCents) {
     return null;
   }
   final diff = currentCents - savedCents;
@@ -379,6 +386,12 @@ class _AlertRow extends ConsumerWidget {
               ],
             ),
           if (paused) Text('Pausada', style: theme.textTheme.bodySmall),
+          if (alert.lastTriggeredAt != null &&
+              alert.lastTriggeredPriceCents != null)
+            Text(
+              'Te avisamos el ${_shortDate(alert.lastTriggeredAt!)} a ${formatCents(alert.lastTriggeredPriceCents!)}',
+              style: theme.textTheme.bodySmall,
+            ),
         ],
       ),
       isThreeLine: true,
