@@ -16,6 +16,7 @@ from pathlib import Path
 
 from firebase_admin import firestore
 
+from app.admin.sync import write_changed
 from app.admin.target import add_target_args, resolve_db
 from app.catalog import flatten_categories
 
@@ -77,12 +78,9 @@ def enabled_spiders(stores: list[dict] | None = None) -> list[str]:
             if s.get("scrapingEnabled") and s.get("spider")]
 
 
-def upload_stores(db, stores: list[dict]) -> int:
-    batch = db.batch()
-    for store in stores:
-        batch.set(db.collection("stores").document(store["code"]), store_document(store), merge=True)
-    batch.commit()
-    return len(stores)
+def upload_stores(db, stores: list[dict]) -> tuple[int, int]:
+    """Registra las tiendas; solo escribe las nuevas o cambiadas. Devuelve (escritas, sin cambios)."""
+    return write_changed(db, "stores", {s["code"]: store_document(s) for s in stores})
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -94,8 +92,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.list_enabled:
         print(json.dumps(enabled_spiders(stores)))
         return 0
-    count = upload_stores(resolve_db(args), stores)
-    print(f"Tiendas registradas: {count}")
+    written, unchanged = upload_stores(resolve_db(args), stores)
+    print(f"Tiendas: {written} actualizadas, {unchanged} sin cambios")
     return 0
 
 

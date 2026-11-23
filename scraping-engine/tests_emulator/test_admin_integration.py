@@ -180,3 +180,15 @@ def test_recheck_moves_newly_blocked_auto_matches_to_review(db):
     # El resumen ya no muestra el precio de la variante distinta.
     summary = db.document("products/victus-3050").get().to_dict()["summary"]
     assert summary["minPriceCents"] == 379900 and summary["offerCount"] == 2  # PV__2 + PV__3 manual
+
+
+def test_config_sync_writes_nothing_when_unchanged(db):
+    """Las fechas vuelven de Firestore con otro tipo: deben compararse bien para no reescribir."""
+    from app.admin.stores import load_stores, upload_stores
+
+    stores = load_stores()
+    upload_categories(db, flatten_categories())
+    upload_stores(db, stores)
+    db.document("stores/COOLBOX").set({"lastCompleteRunAt": NOW}, merge=True)  # dato que pone el motor
+    assert upload_categories(db, flatten_categories()) == (0, len(flatten_categories()))
+    assert upload_stores(db, stores) == (0, len(stores))

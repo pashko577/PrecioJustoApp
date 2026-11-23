@@ -38,9 +38,35 @@ jobs:
           echo "Tiendas activas: $SPIDERS"
           echo "spiders=$SPIDERS" >> "$GITHUB_OUTPUT"
 
+  # Una sola vez por corrida (antes se repetía en cada tienda). Solo escribe lo que cambió:
+  # normalmente 0 escrituras. Si falla (por ejemplo, cuota agotada), no se lanzan las tiendas.
+  sync:
+    name: Sincronizar categorías y tiendas
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@v5
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+      - uses: actions/setup-python@v6
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scraping-engine/requirements.txt
+      - name: Sincronizar (solo cambios)
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        working-directory: scraping-engine
+        run: |
+          pip install -r requirements.txt
+          python -m app.admin.categories --prod --yes
+          python -m app.admin.stores --prod --yes
+
   scrape:
     name: Scraping ${{ matrix.spider }}
-    needs: plan
+    needs: [plan, sync]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -78,13 +104,6 @@ jobs:
         if: steps.creds.outputs.ready == 'true'
         working-directory: scraping-engine
         run: pip install -r requirements.txt
-
-      - name: Sincronizar categorías y tiendas (idempotente)
-        if: steps.creds.outputs.ready == 'true'
-        working-directory: scraping-engine
-        run: |
-          python -m app.admin.categories --prod --yes
-          python -m app.admin.stores --prod --yes
 
       - name: Ejecutar spider
         if: steps.creds.outputs.ready == 'true'
