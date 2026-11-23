@@ -9,7 +9,8 @@
     { "slug": "ssd", "name": "Discos SSD" },
     { "slug": "memorias-ram", "name": "Memorias RAM" },
     { "slug": "placas-madre", "name": "Placas madre" },
-    { "slug": "tarjetas-graficas", "name": "Tarjetas gráficas" }
+    { "slug": "tarjetas-graficas", "name": "Tarjetas gráficas" },
+    { "slug": "discos-externos", "name": "Discos externos" }
   ]},
   { "slug": "electrodomesticos", "name": "Electrodomésticos", "icon": "kitchen", "children": [
     { "slug": "refrigeradoras", "name": "Refrigeradoras" },

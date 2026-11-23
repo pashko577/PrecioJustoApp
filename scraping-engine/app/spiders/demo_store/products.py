@@ -10,6 +10,7 @@ from pathlib import Path
 import scrapy
 
 from app.models.offer import ScrapedOffer
+from app.normalizers.identifiers import canonical_gtin
 from app.normalizers.price import parse_price_to_cents
 from app.pipelines.job_errors import record_error
 
@@ -48,7 +49,7 @@ class DemoStoreSpider(scrapy.Spider):
                 price_cents=price_cents,
                 shipping_cents=self._parse_shipping(card.css(".shipping::text").get()),
                 availability=AVAILABILITY_MAP.get(card.css(".stock::attr(data-status)").get(), "UNKNOWN"),
-                identifiers={"ean": ean} if (ean := card.css(".ean::text").get()) else {},
+                identifiers={"GTIN": gtin} if (gtin := canonical_gtin(card.css(".ean::text").get())) else {},
                 product_url=url,
                 image_url=card.css("img.thumb::attr(src)").get(),
                 seller="Tienda Demo",

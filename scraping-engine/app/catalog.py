@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.normalizers.identifiers import canonical_gtin
 from app.normalizers.text import normalize_text, search_tokens
 
 CATEGORIES_FILE = Path(__file__).resolve().parent / "data" / "categories.json"
@@ -16,6 +17,7 @@ CATEGORIES_FILE = Path(__file__).resolve().parent / "data" / "categories.json"
 NO_PRICE_SORT_VALUE = 9_999_999_999
 
 IDENTIFIER_TYPES = ("EAN", "GTIN", "UPC", "MPN")
+BARCODE_TYPES = ("EAN", "GTIN", "UPC")
 _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
@@ -61,7 +63,12 @@ def slugify(text: str) -> str:
 
 
 def identifier_keys(identifiers: dict[str, list[str] | str] | None) -> list[str]:
-    """`{"EAN": ["0740..."]}` -> `["EAN:0740..."]` (para buscar con array-contains)."""
+    """Claves para buscar con `array-contains`.
+
+    Los códigos de barras (EAN, UPC, GTIN) se unifican como `GTIN:<canónico de 13 dígitos>`,
+    así UPC `740617338515` y EAN `0740617338515` coinciden. `MPN` (código del fabricante) se
+    conserva tal cual.
+    """
     keys: set[str] = set()
     for kind, values in (identifiers or {}).items():
         kind_up = kind.upper()
@@ -71,9 +78,13 @@ def identifier_keys(identifiers: dict[str, list[str] | str] | None) -> list[str]
             clean = re.sub(r"[\s-]", "", str(value))
             if not clean:
                 continue
-            if kind_up in ("EAN", "GTIN", "UPC") and not clean.isdigit():
-                raise CatalogError(f"{kind_up} debe ser numérico: {value!r}")
-            keys.add(f"{kind_up}:{clean}")
+            if kind_up in BARCODE_TYPES:
+                gtin = canonical_gtin(clean)
+                if gtin is None:
+                    raise CatalogError(f"{kind_up} inválido (longitud o dígito verificador): {value!r}")
+                keys.add(f"GTIN:{gtin}")
+            else:
+                keys.add(f"{kind_up}:{clean.upper()}")
     return sorted(keys)
 
 

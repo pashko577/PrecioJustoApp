@@ -581,10 +581,11 @@ Cada extractor tendrá:
 
 | Aspecto | Definición |
 |---|---|
-| Disparador | `schedule` (cron) + `workflow_dispatch` para ejecución manual |
+| Disparador | `schedule` cada 6 horas (`15 */6 * * *` UTC) + `workflow_dispatch` (con opción de limitar páginas) |
 | Frecuencia inicial | Cada 6 horas para Tecnología |
-| Paralelismo | Matriz con un job por tienda habilitada |
-| Credenciales | Cuenta de servicio de Firebase guardada como secret `FIREBASE_SERVICE_ACCOUNT` |
+| Paralelismo | Matriz con un job por tienda, **una tienda a la vez** (`max-parallel: 1`) |
+| Credenciales | Cuenta de servicio de Firebase guardada como secret `FIREBASE_SERVICE_ACCOUNT`. Si falta, el job avisa y termina sin ejecutar nada |
+| Sincronización | Antes de cada corrida carga categorías y tiendas (idempotente) para que producción siempre coincida con el repositorio |
 | Tiempo máximo | `timeout-minutes` por job para no consumir cuota ante bloqueos |
 | Concurrencia | `concurrency` por tienda para no ejecutar dos corridas a la vez |
 | Logs | Logs detallados en GitHub Actions; en Firestore solo el resumen del job |
@@ -633,7 +634,7 @@ Mientras no exista panel de administración, las tareas se harán con scripts en
 | `import_products.py` ✅ | Carga inicial de productos desde JSON; valida todo el archivo antes de escribir y no duplica |
 | `seed.py` ✅ | Datos de ejemplo en el emulador (categorías, catálogo de muestra y ofertas ficticias) |
 | `set_role.py` | Asignar rol `admin` u `operator` (custom claims de Firebase Auth) |
-| `stores.py` | Crear, editar, activar o desactivar tiendas |
+| `stores.py` ✅ | Registrar tiendas y su evaluación (`app/data/stores.json`). **Se niega a activar una tienda sin evaluación registrada** (7.7) |
 | `review_matches.py` | Listar publicaciones `PENDING_REVIEW` y aprobarlas, rechazarlas o asociarlas a un producto |
 
 Los scripts escriben en el **emulador** por defecto. Para el proyecto real exigen `--prod --yes` y credenciales (`GOOGLE_APPLICATION_CREDENTIALS` con un archivo **fuera** del repositorio, o `FIREBASE_SERVICE_ACCOUNT`). Rechazan `--prod` si detectan el emulador.
@@ -703,6 +704,28 @@ Puntuación de 0 a 100:
 | Menor a 75 | Sin coincidencia; puede crear producto nuevo en revisión | `UNMATCHED` |
 
 Estos umbrales se ajustarán con datos reales y pruebas de falsos positivos.
+
+### 8.5. Implementación (sprint 4)
+
+Código en `scraping-engine/app/matching/` (`scoring.py` son funciones puras; `matcher.py` usa Firestore).
+
+| Paso | Regla |
+|---|---|
+| 1 | Si la publicación ya tiene una decisión (`MATCHED_*`, `PENDING_REVIEW`, `REJECTED`), se respeta. Solo se procesan publicaciones nuevas o sin asociar |
+| 2 | **Nivel 1:** mismo GTIN (código de barras) o mismo MPN (código del fabricante) → `MATCHED_AUTO` |
+| 3 | **Niveles 2 y 3:** puntuación contra los productos de la misma categoría, descartando los bloqueados (8.3) |
+| 4 | Sin coincidencia y con GTIN o MPN → se **crea el producto** a partir de la publicación (`products.source`) |
+| 5 | Sin coincidencia ni identificadores → `UNMATCHED` (no aparece en la app hasta revisión) |
+
+Ajustes descubiertos con datos reales de Coolbox:
+
+- Los códigos de barras se guardan en forma canónica de 13 dígitos (`GTIN:`) y se valida el dígito verificador: UPC `740617338515` y EAN `0740617338515` son el mismo producto.
+- Las versiones escritas juntas o separadas son equivalentes (`PCIE4.0` = `PCIe 4.0`).
+- Palabras descriptivas ("disco", "unidad", "sólido"...) no cuentan como características.
+- Las características se comparan contra el conjunto más pequeño: un título corto que **omite** datos no se castiga; uno que **contradice** datos, sí.
+- La frecuencia (Hz) y la potencia (W) bloquean igual que la capacidad: 165 Hz y 180 Hz son modelos distintos.
+
+Resultado de la primera corrida real (Coolbox, 1 página por categoría): 251 publicaciones, **248 asociadas automáticamente (99 %)**, 3 en revisión manual (modelos realmente distintos), 0 falsos positivos detectados.
 
 ---
 
@@ -918,6 +941,10 @@ Convenciones: montos en **céntimos (entero)** con sufijo `Cents`; fechas como `
 | currentPriceCents | int | |
 | previousPriceCents | int \| null | Solo si fue observado por PRECIO JUSTO |
 | currentShippingCents | int \| null | `null` = desconocido |
+| listPriceCents | int \| null | Precio "normal" que publica la tienda (tachado). **No** es un precio anterior observado (RF-04): no se muestra como "antes" |
+| identifiers | map | `{ GTIN: canónico, MPN: código del fabricante }` |
+| categoryHint | string \| null | Nuestra categoría según la categoría de la tienda |
+| matchReason | string | Motivo de la asociación ("mismo código de barras", "puntuación alta"...) |
 | currency | string | |
 | availability | string | RN-05 |
 | lastCheckedAt | timestamp | |
@@ -1275,7 +1302,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 1 | Fundación técnica | Repositorio, proyecto Firebase, emuladores, app Flutter conectada, motor con prueba local, CI | ✅ |
 | 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
 | 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
-| 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | |
+| 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | ✅ Coolbox (falta el secret de producción) |
 | 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | |
 | 7 | Seguimiento | Favoritos, listas y alertas | |

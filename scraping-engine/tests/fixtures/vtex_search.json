@@ -1,0 +1,98 @@
+[
+  {
+    "productId": "9001",
+    "productName": "Laptop Demo Book 14 Ryzen 5 16GB 512GB SSD",
+    "brand": "DemoBrand",
+    "productReference": "dbk14-r5",
+    "link": "https://tienda.example.com/laptop-demo-book-14/p",
+    "categories": ["/Cómputo/Laptops/", "/Cómputo/"],
+    "categoriesIds": ["/47/65/", "/47/"],
+    "items": [
+      {
+        "itemId": "90011",
+        "ean": "2001234567893",
+        "nameComplete": "Laptop Demo Book 14 Ryzen 5 16GB 512GB SSD, gris",
+        "images": [{"imageUrl": "https://tienda.example.com/img/90011.jpg"}],
+        "sellers": [
+          {"sellerId": "1", "sellerName": "Tienda Demo S.A.C.", "sellerDefault": true,
+           "commertialOffer": {"Price": 2499.9, "ListPrice": 2999.0, "AvailableQuantity": 12, "IsAvailable": true}}
+        ]
+      },
+      {
+        "itemId": "90012",
+        "ean": "2009876543213",
+        "nameComplete": "Laptop Demo Book 14 Ryzen 5 16GB 512GB SSD, azul",
+        "images": [],
+        "sellers": [
+          {"sellerId": "1", "sellerName": "Tienda Demo S.A.C.", "sellerDefault": true,
+           "commertialOffer": {"Price": 2549.9, "ListPrice": 2549.9, "AvailableQuantity": 0, "IsAvailable": false}}
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "9002",
+    "productName": "SSD Demo NVMe 1TB",
+    "brand": "DemoBrand",
+    "productReference": "",
+    "link": "https://tienda.example.com/ssd-demo-1tb/p",
+    "categories": ["/Cómputo/Componentes/Discos Internos y SSD/"],
+    "categoriesIds": ["/47/258/259/"],
+    "items": [
+      {
+        "itemId": "90021",
+        "ean": "",
+        "nameComplete": "SSD Demo NVMe 1TB",
+        "images": [],
+        "sellers": [
+          {"sellerId": "seller2", "sellerName": "Vendedor Marketplace", "sellerDefault": false,
+           "commertialOffer": {"Price": 199.0, "ListPrice": 199.0, "AvailableQuantity": 3, "IsAvailable": true}},
+          {"sellerId": "1", "sellerName": "Tienda Demo S.A.C.", "sellerDefault": true,
+           "commertialOffer": {"Price": 209.0, "ListPrice": 209.0, "AvailableQuantity": 5, "IsAvailable": true}}
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "9003",
+    "productName": "Celular Demo X 128GB Reacondicionado",
+    "brand": "DemoPhone",
+    "productReference": "DPX-128",
+    "link": "https://tienda.example.com/celular-demo-x-reacondicionado/p",
+    "categories": ["/Reacondicionado/Celulares/"],
+    "categoriesIds": ["/20/21/"],
+    "items": [
+      {
+        "itemId": "90031",
+        "ean": "12345",
+        "nameComplete": "Celular Demo X 128GB",
+        "images": [],
+        "sellers": [
+          {"sellerId": "1", "sellerName": "Tienda Demo S.A.C.", "sellerDefault": true,
+           "commertialOffer": {"Price": 899.0, "ListPrice": 899.0, "AvailableQuantity": 2, "IsAvailable": true}}
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "9004",
+    "productName": "Monitor Demo 27 sin precio",
+    "brand": "DemoView",
+    "productReference": "DV27",
+    "link": "https://tienda.example.com/monitor-demo-27/p",
+    "categories": ["/Cómputo/Monitores/"],
+    "categoriesIds": ["/47/66/"],
+    "items": [
+      {
+        "itemId": "90041",
+        "ean": "",
+        "nameComplete": "Monitor Demo 27",
+        "images": [],
+        "sellers": [
+          {"sellerId": "1", "sellerName": "Tienda Demo S.A.C.", "sellerDefault": true,
+           "commertialOffer": {"Price": 0, "ListPrice": 0, "AvailableQuantity": 0, "IsAvailable": false}}
+        ]
+      }
+    ]
+  }
+]

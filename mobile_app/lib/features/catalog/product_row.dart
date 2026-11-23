@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/money.dart';
+import '../../core/offer_rules.dart';
 import '../../models/models.dart';
 
 /// Fila de producto usada en el catálogo y en la búsqueda.
@@ -14,6 +15,8 @@ class ProductRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = product.summary;
     final theme = Theme.of(context);
+    // RN-01: si el resumen no se actualizó dentro de la vigencia, el precio no está confirmado.
+    final priceIsFresh = s.lastCheckedAt != null && isFresh(s.lastCheckedAt!, defaultFreshnessMinutes);
     final stores = s.offerCount == 0
         ? 'Sin ofertas aún'
         : '${s.offerCount} ${s.offerCount == 1 ? 'tienda' : 'tiendas'}';
@@ -25,14 +28,18 @@ class ProductRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (s.minPriceCents != null) ...[
+          if (s.minPriceCents != null && priceIsFresh) ...[
             Text('desde', style: theme.textTheme.labelSmall),
             Text(
               formatCents(s.minPriceCents!),
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ] else
-            Text('Sin precio\nverificado', textAlign: TextAlign.end, style: theme.textTheme.bodySmall),
+            Text(
+              s.minPriceCents != null ? 'Precio por\nconfirmar' : 'Sin precio\nverificado',
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodySmall,
+            ),
         ],
       ),
       onTap: () => context.push('/product/${product.id}'),

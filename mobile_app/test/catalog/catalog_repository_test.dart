@@ -50,7 +50,7 @@ void main() {
     db = FakeFirebaseFirestore();
     repo = CatalogRepository(db);
     await addProduct(db, 'knv3-1tb', name: 'Kingston NV3 1TB', category: 'ssd',
-        words: ['1tb', 'kingston', 'nv3', 'ssd'], price: 24990, identifierKeys: ['EAN:0740617340456']);
+        words: ['1tb', 'kingston', 'nv3', 'ssd'], price: 24990, identifierKeys: ['GTIN:2001234567893']);
     await addProduct(db, 'knv3-2tb', name: 'Kingston NV3 2TB', category: 'ssd',
         words: ['2tb', 'kingston', 'nv3', 'ssd'], price: 45990);
     await addProduct(db, 'fury', name: 'Kingston Fury Beast 16GB', category: 'memorias-ram',
@@ -107,7 +107,8 @@ void main() {
     });
 
     test('código de barras', () async {
-      expect(await ids('0740617340456'), ['knv3-1tb']);
+      expect(await ids('2001234567893'), ['knv3-1tb']);
+      expect(await ids('2001-2345 67893'), ['knv3-1tb']);
       expect(await ids('0000000000000'), isEmpty);
     });
 

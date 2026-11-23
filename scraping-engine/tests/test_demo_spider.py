@@ -25,7 +25,7 @@ def test_offer_fields():
     assert knv3.price_cents == 24990
     assert knv3.shipping_cents == 1000
     assert knv3.availability == "AVAILABLE"
-    assert knv3.identifiers == {"ean": "0740617340456"}
+    assert knv3.identifiers == {"GTIN": "2001234567893"}
 
     assert offers[1].price_cents == 124990
     assert offers[1].availability == "OUT_OF_STOCK"

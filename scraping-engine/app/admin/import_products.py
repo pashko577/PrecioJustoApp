@@ -2,7 +2,7 @@
 
 Formato: lista de objetos con los campos de `app.catalog.ProductInput`, por ejemplo:
     [{"category": "ssd", "brand": "Kingston", "model": "NV3", "name": "Kingston NV3 1TB",
-      "attributes": {"capacidad": "1 TB"}, "identifiers": {"EAN": ["0740617340456"]}}]
+      "attributes": {"capacidad": "1 TB"}, "identifiers": {"EAN": ["2001234567893"]}}]
 
 Uso:
     python -m app.admin.import_products app/data/sample_products.json            # emulador

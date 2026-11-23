@@ -66,11 +66,8 @@ class CatalogRepository {
     if (query.isEmpty) return const [];
 
     if (query.barcode != null) {
-      final code = query.barcode!;
-      final snap = await _products
-          .where('identifierKeys', arrayContainsAny: ['EAN:$code', 'GTIN:$code', 'UPC:$code'])
-          .limit(10)
-          .get();
+      final code = query.barcode!; // canónico (13 dígitos), ver canonicalGtin
+      final snap = await _products.where('identifierKeys', arrayContains: 'GTIN:$code').limit(10).get();
       return snap.docs.map(Product.fromDoc).where((p) => p.status == 'ACTIVE').toList();
     }
 

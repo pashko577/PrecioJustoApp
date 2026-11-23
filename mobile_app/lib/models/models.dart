@@ -83,7 +83,7 @@ class Product {
   final String description;
   final Map<String, dynamic> attributes;
 
-  /// Códigos comerciales, por ejemplo `{"EAN": ["0740617340456"]}`.
+  /// Códigos comerciales, por ejemplo `{"EAN": ["2001234567893"]}`.
   final Map<String, List<String>> identifiers;
 
   /// Palabras y prefijos normalizados (ver `search_normalizer.dart`).

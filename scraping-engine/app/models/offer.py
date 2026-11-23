@@ -28,7 +28,11 @@ class ScrapedOffer:
     model: str | None = None
     seller: str | None = None
     shipping_cents: int | None = None  # None = envío desconocido (RN-03), no gratis
-    identifiers: dict[str, str] = field(default_factory=dict)
+    # Precio "normal" que publica la tienda (tachado). NO es un precio anterior observado por
+    # PRECIO JUSTO (RF-04), por eso se guarda aparte y no se muestra como "antes".
+    list_price_cents: int | None = None
+    identifiers: dict[str, str] = field(default_factory=dict)  # {"GTIN": canónico, "MPN": ...}
+    category_hint: str | None = None  # slug de nuestra categoría según la tienda
     image_url: str | None = None
     checked_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -44,6 +48,8 @@ class ScrapedOffer:
             errors.append("price_cents debe ser entero positivo")
         if self.shipping_cents is not None and (type(self.shipping_cents) is not int or self.shipping_cents < 0):
             errors.append("shipping_cents debe ser entero >= 0 o None")
+        if self.list_price_cents is not None and (type(self.list_price_cents) is not int or self.list_price_cents <= 0):
+            errors.append("list_price_cents debe ser entero positivo o None")
         if self.currency not in CURRENCY_VALUES:
             errors.append(f"currency no soportada: {self.currency}")
         if self.availability not in AVAILABILITY_VALUES:

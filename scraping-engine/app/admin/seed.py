@@ -20,6 +20,7 @@ from firebase_admin import firestore
 
 from app.admin.categories import upload_categories
 from app.admin.import_products import load_products, write_products
+from app.admin.stores import load_stores, upload_stores
 from app.catalog import (
     CATEGORIES_FILE,
     NO_PRICE_SORT_VALUE,
@@ -43,7 +44,7 @@ DEMO_OFFERS: list[tuple[ProductInput, list[tuple]]] = [
     (ProductInput(id="kingston-nv3-1tb", category="ssd", brand="Kingston", model="NV3",
                   name="Kingston NV3 1TB SSD NVMe PCIe 4.0",
                   attributes={"capacidad": "1 TB", "interfaz": "PCIe 4.0"},
-                  identifiers={"EAN": ["0740617340456"]}),  # EAN FICTICIO (igual al de la página demo)
+                  identifiers={"EAN": ["2001234567893"]}),  # EAN FICTICIO (igual al de la página demo)
      [("DEMO_STORE", "KNV3-1TB", 24990, "AVAILABLE", 1000, 2),
       ("DEMO_STORE_B", "B-778", 25990, "AVAILABLE", None, 3)]),
     (ProductInput(id="samsung-990-evo-plus-1tb", category="ssd", brand="Samsung", model="990 EVO Plus",
@@ -85,6 +86,7 @@ def compute_summary(offers: list[tuple]) -> dict:
 def seed(db) -> None:
     categories = flatten_categories()
     upload_categories(db, categories)
+    upload_stores(db, load_stores())  # tiendas reales registradas (con su evaluación)
     valid = {c["slug"] for c in categories}
     write_products(db, load_products(SAMPLE_PRODUCTS_FILE, valid))
 

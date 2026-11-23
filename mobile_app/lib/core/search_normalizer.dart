@@ -76,6 +76,28 @@ String _stripEdges(String token) {
   return token.substring(start, end);
 }
 
+/// Valida el dígito verificador GTIN (módulo 10, pesos 3 y 1 desde la derecha).
+bool gtinCheckDigitOk(String code) {
+  final digits = code.split('').map(int.parse).toList();
+  final check = digits.removeLast();
+  var total = 0;
+  for (var i = 0; i < digits.length; i++) {
+    total += digits[digits.length - 1 - i] * (i.isEven ? 3 : 1);
+  }
+  return (10 - total % 10) % 10 == check;
+}
+
+/// Forma canónica de un código de barras, igual que `canonical_gtin` en Python
+/// (`scraping-engine/app/normalizers/identifiers.py`): UPC de 12 dígitos y EAN de 13 del
+/// mismo producto dan el mismo resultado. Devuelve `null` si el código no es válido.
+String? canonicalGtin(String raw) {
+  final code = raw.replaceAll(RegExp(r'[\s-]'), '');
+  if (!RegExp(r'^\d+$').hasMatch(code) || ![8, 12, 13, 14].contains(code.length)) return null;
+  if (!gtinCheckDigitOk(code)) return null;
+  if (code.length == 14) return code.startsWith('0') ? code.substring(1) : code;
+  return code.padLeft(13, '0');
+}
+
 /// Consulta interpretada: palabras o código de barras (EAN/GTIN/UPC de 8 a 14 dígitos).
 class SearchQuery {
   const SearchQuery({this.words = const [], this.barcode});
@@ -93,7 +115,11 @@ class SearchQuery {
 
   factory SearchQuery.parse(String raw) {
     final compact = raw.replaceAll(RegExp(r'[\s-]'), '');
-    if (RegExp(r'^\d{8,14}$').hasMatch(compact)) return SearchQuery(barcode: compact);
+    if (RegExp(r'^\d{8,14}$').hasMatch(compact)) {
+      // Código con forma de GTIN: se busca en forma canónica. Si el dígito verificador no
+      // cuadra, igual se trata como código (sin resultados) en vez de buscarlo como palabra.
+      return SearchQuery(barcode: canonicalGtin(compact) ?? compact);
+    }
     return SearchQuery(words: wordTokens(raw));
   }
 

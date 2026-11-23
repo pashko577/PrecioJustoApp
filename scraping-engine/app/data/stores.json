@@ -1,0 +1,19 @@
+[
+  {
+    "code": "COOLBOX",
+    "name": "Coolbox",
+    "baseUrl": "https://www.coolbox.pe",
+    "platform": "VTEX",
+    "spider": "coolbox",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 360,
+    "freshnessMinutes": 720,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite catálogo público y /api/catalog_system/pub/*. Bloquea /busca, /checkout, /account y /_secure. Sin crawl-delay. Solo bloquea por nombre a bots de IA/copiadores.",
+      "terms": "Términos y condiciones de RASH PERU S.R.L. (actualización 21/09/2026). Regulan compras (registro, pagos, despacho, devoluciones). No contienen cláusulas sobre acceso automatizado, extracción ni propiedad intelectual del contenido. Cláusula 5: precios vigentes solo en coolbox.pe; fotos referenciales.",
+      "conclusion": "Viable con extracción responsable: catálogo público VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403. No mostrar fotos de la tienda. Requiere revisión legal antes del lanzamiento comercial (sección 13.3).",
+      "notes": "La API /api/catalog_system/pub/category/tree respondió 429; se usan ids de categoría fijos."
+    }
+  }
+]

@@ -29,10 +29,19 @@ void main() {
     });
 
     test('detecta códigos de barras de 8 a 14 dígitos', () {
-      expect(SearchQuery.parse('0740617340456').barcode, '0740617340456');
-      expect(SearchQuery.parse('0740 6173-40456').barcode, '0740617340456');
+      expect(SearchQuery.parse('2001234567893').barcode, '2001234567893');
+      expect(SearchQuery.parse('2001 2345-67893').barcode, '2001234567893');
       expect(SearchQuery.parse('1234567').barcode, isNull); // 7 dígitos: no es código
       expect(SearchQuery.parse('4060').barcode, isNull);
+    });
+
+    test('código de barras canónico igual que en Python', () {
+      expect(canonicalGtin('740617338515'), '0740617338515'); // UPC-A -> EAN-13
+      expect(canonicalGtin('0740617338515'), '0740617338515');
+      expect(canonicalGtin('00740617338515'), '0740617338515'); // GTIN-14
+      expect(canonicalGtin('96385074'), '0000096385074'); // EAN-8
+      expect(canonicalGtin('0740617340456'), isNull); // dígito verificador incorrecto
+      expect(SearchQuery.parse('740617338515').barcode, '0740617338515');
     });
 
     test('consulta vacía o solo palabras vacías', () {

@@ -76,6 +76,26 @@ firebase emulators:start --project demo-precio-justo   # con "host": "0.0.0.0" e
 flutter run --dart-define=EMULATOR_HOST=192.168.X.X     # IP de tu PC en la red local
 ```
 
+## Scraping
+
+Tiendas activas: **Coolbox** (VTEX). Evaluación registrada en [stores.json](scraping-engine/app/data/stores.json).
+
+Probar contra el emulador (una página por categoría, ~1 minuto, pausas de 5 s entre solicitudes):
+
+```powershell
+cd scraping-engine
+$env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085"
+.venv\Scripts\python -m app.admin.seed
+.venv\Scripts\scrapy crawl coolbox -a max_pages=1
+```
+
+En producción lo ejecuta el workflow [scrape.yml](.github/workflows/scrape.yml) cada 6 horas, **solo si existe el secret `FIREBASE_SERVICE_ACCOUNT`**:
+
+1. Firebase Console → Configuración del proyecto → **Cuentas de servicio** → **Generar nueva clave privada** (descarga un JSON).
+2. GitHub → Settings → Secrets and variables → Actions → **New repository secret**: nombre `FIREBASE_SERVICE_ACCOUNT`, valor = contenido completo del JSON.
+3. **Borrar el JSON descargado** de la computadora (o guardarlo fuera del repositorio).
+4. Probar: Actions → Scraping → Run workflow (con `max_pages` = 1).
+
 ## Administración del catálogo
 
 Los scripts escriben en el **emulador** por defecto (requiere `FIRESTORE_EMULATOR_HOST`):

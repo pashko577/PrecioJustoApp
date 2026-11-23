@@ -42,10 +42,10 @@ def test_search_tokens_include_prefixes_from_three_letters():
 
 
 def test_search_tokens_keep_short_words_but_do_not_prefix_numbers():
-    tokens = search_tokens("LG 0740617340456")
+    tokens = search_tokens("LG 2001234567893")
     assert "lg" in tokens
-    assert "0740617340456" in tokens
-    assert "074" not in tokens
+    assert "2001234567893" in tokens
+    assert "200" not in tokens
 
 
 def test_search_tokens_contain_all_words():

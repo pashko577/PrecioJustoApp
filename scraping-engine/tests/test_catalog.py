@@ -38,10 +38,14 @@ def test_slugify():
 
 
 def test_identifier_keys():
-    assert identifier_keys({"ean": ["0740-6173 40456"], "MPN": "SNV3S/1000G"}) == [
-        "EAN:0740617340456",
+    assert identifier_keys({"ean": ["2001-2345 67893"], "MPN": "snv3s/1000g"}) == [
+        "GTIN:2001234567893",
         "MPN:SNV3S/1000G",
     ]
+    # UPC de 12 dígitos y EAN de 13 del mismo producto producen la misma clave.
+    assert identifier_keys({"UPC": "740617338515"}) == identifier_keys({"EAN": "0740617338515"})
+    with pytest.raises(CatalogError, match="verificador"):
+        identifier_keys({"EAN": ["0740617340456"]})  # dígito verificador incorrecto
     with pytest.raises(CatalogError):
         identifier_keys({"EAN": ["ABC"]})
     with pytest.raises(CatalogError):
@@ -51,7 +55,7 @@ def test_identifier_keys():
 def test_build_product_doc():
     pid, doc = build_product_doc(
         ProductInput(category="ssd", brand="Kingston", model="NV3", name="Kingston NV3 1TB",
-                     attributes={"Capacidad": "1000 GB"}, identifiers={"EAN": "0740617340456"}),
+                     attributes={"Capacidad": "1000 GB"}, identifiers={"EAN": "2001234567893"}),
         VALID,
     )
     assert pid == "kingston-nv3-1tb"  # no repite la marca si ya está en el nombre
@@ -59,7 +63,7 @@ def test_build_product_doc():
     assert pid2 == "kingston-ssd-nv3-1tb"
     assert doc["normalizedName"] == "kingston nv3 1tb"
     assert doc["attributes"] == {"capacidad": "1tb"}
-    assert doc["identifierKeys"] == ["EAN:0740617340456"]
+    assert doc["identifierKeys"] == ["GTIN:2001234567893"]
     assert {"kingston", "kings", "nv3", "1tb"} <= set(doc["searchTokens"])
     assert "summary" not in doc  # el resumen lo calcula el motor
 

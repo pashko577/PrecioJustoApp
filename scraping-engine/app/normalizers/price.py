@@ -45,3 +45,20 @@ def parse_price_to_cents(raw: str) -> int:
     if cents <= 0:
         raise ValueError(f"Precio no positivo: {raw!r}")
     return cents
+
+
+def number_to_cents(value: float | int | str | Decimal | None) -> int | None:
+    """Convierte un precio numérico de una API (por ejemplo, `629.0` de VTEX) a céntimos.
+
+    Pasa por `str` antes de `Decimal` para no arrastrar errores de punto flotante
+    (`Decimal(0.1)` != `Decimal("0.1")`). Devuelve `None` si el valor no es un precio positivo.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        amount = Decimal(str(value))
+    except InvalidOperation:
+        return None
+    if not amount.is_finite() or amount <= 0:
+        return None
+    return int((amount * 100).quantize(Decimal("1")))
