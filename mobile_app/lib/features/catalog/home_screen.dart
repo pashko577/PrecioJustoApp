@@ -20,6 +20,18 @@ class HomeScreen extends ConsumerWidget {
         title: const Text('PRECIO JUSTO'),
         actions: [
           IconButton(
+            key: const Key('favorites-nav'),
+            tooltip: 'Mis productos',
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () => context.push('/favorites'),
+          ),
+          IconButton(
+            key: const Key('alerts-nav'),
+            tooltip: 'Mis alertas',
+            icon: const Icon(Icons.notifications_none),
+            onPressed: () => context.push('/alerts'),
+          ),
+          IconButton(
             key: const Key('account-button'),
             tooltip: isSignedIn ? 'Mi cuenta' : 'Iniciar sesión',
             icon: Icon(isSignedIn ? Icons.account_circle : Icons.account_circle_outlined),

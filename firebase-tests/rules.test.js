@@ -6,7 +6,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, collection, getCountFromServer } from 'firebase/firestore';
 
 let env;
 
@@ -149,4 +149,37 @@ test('eliminar cuenta: el dueño puede borrar subcolecciones y perfil', async ()
 
 test('eliminar cuenta: nadie puede borrar el perfil de otro', async () => {
   await assertFails(deleteDoc(doc(user('luis'), 'users/ana')));
+});
+
+// ---------- Sprint 7: seguimiento (mismas escrituras que TrackingRepository) ----------
+
+const alertDoc = (status, target = 23050) => ({
+  productId: 'p1', variantId: null, productName: 'NV3', targetPriceCents: target,
+  currency: 'PEN', condition: 'AT_OR_BELOW', status, lastTriggeredPriceCents: null,
+});
+
+test('alertas: el usuario reactiva una alerta cumplida al editarla', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), 'users/ana/alerts/a1'), { ...alertDoc('TRIGGERED'), lastTriggeredPriceCents: 22000 });
+  });
+  await assertSucceeds(setDoc(doc(user('ana'), 'users/ana/alerts/a1'), alertDoc('ACTIVE', 21000)));
+  await assertSucceeds(setDoc(doc(user('ana'), 'users/ana/alerts/a1'), alertDoc('PAUSED', 21000)));
+});
+
+test('alertas: moneda o condición distintas se rechazan', async () => {
+  await assertFails(setDoc(doc(user('ana'), 'users/ana/alerts/a2'), { ...alertDoc('ACTIVE'), currency: 'USD' }));
+  await assertFails(setDoc(doc(user('ana'), 'users/ana/alerts/a2'), { ...alertDoc('ACTIVE'), condition: 'ABOVE' }));
+});
+
+test('listas: crear, renombrar y límite de 100 productos', async () => {
+  const ref = doc(user('ana'), 'users/ana/wishlists/l1');
+  await assertSucceeds(setDoc(ref, { name: 'Cocina', productIds: [], createdAt: serverTimestamp(), updatedAt: serverTimestamp() }));
+  await assertSucceeds(setDoc(ref, { name: 'Cocina nueva', productIds: ['p1', 'p2'], updatedAt: serverTimestamp() }));
+  await assertFails(setDoc(ref, { name: '', productIds: [] }));
+  await assertFails(setDoc(ref, { name: 'X', productIds: Array.from({ length: 101 }, (_, i) => `p${i}`) }));
+});
+
+test('conteo de favoritos (límite del plan): el dueño puede contar, otro no', async () => {
+  await assertSucceeds(getCountFromServer(collection(user('ana'), 'users/ana/favorites')));
+  await assertFails(getCountFromServer(collection(user('luis'), 'users/ana/favorites')));
 });

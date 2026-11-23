@@ -12,6 +12,7 @@ import '../features/auth/register_screen.dart';
 import '../features/catalog/home_screen.dart';
 import '../features/catalog/product_screen.dart';
 import '../features/catalog/search_screen.dart';
+import '../features/tracking/tracking_screens.dart';
 
 /// Pantallas de acceso: si ya hay sesión, no tiene sentido mostrarlas.
 const authPaths = {'/login', '/register', '/forgot-password'};
@@ -81,6 +82,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => ForgotPasswordScreen(initialEmail: state.uri.queryParameters['email']),
       ),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: '/favorites',
+        builder: (_, _) => const FavoritesScreen(),
+        routes: [
+          GoRoute(path: 'list/:id', builder: (_, state) => WishlistScreen(listId: state.pathParameters['id']!)),
+        ],
+      ),
+      GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
     ],
   );
   ref.onDispose(router.dispose);

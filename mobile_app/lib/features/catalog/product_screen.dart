@@ -7,6 +7,7 @@ import '../../core/offer_rules.dart';
 import '../../models/models.dart';
 import '../../services/catalog_repository.dart';
 import '../history/price_history_section.dart';
+import '../tracking/tracking_actions.dart';
 import '../offers/offer_tile.dart';
 
 class ProductScreen extends ConsumerWidget {
@@ -33,6 +34,19 @@ class ProductScreen extends ConsumerWidget {
                   Text(p.name, style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 4),
                   Text([p.brand, if (p.model != null) p.model!].join(' · ')),
+                  const SizedBox(height: 12),
+                  TrackingActions(
+                    product: p,
+                    currentBestCents: offers.value == null
+                        ? null
+                        : compareOffers(
+                            offers.value!,
+                            (o) => isFresh(
+                              o.lastCheckedAt,
+                              freshness[o.storeCode] ?? defaultFreshnessMinutes,
+                            ),
+                          ).best?.priceCents,
+                  ),
                   if (p.attributes.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Wrap(
@@ -40,18 +54,30 @@ class ProductScreen extends ConsumerWidget {
                       runSpacing: 6,
                       children: [
                         for (final e in p.attributes.entries)
-                          Chip(label: Text('${e.key}: ${e.value}'), visualDensity: VisualDensity.compact),
+                          Chip(
+                            label: Text('${e.key}: ${e.value}'),
+                            visualDensity: VisualDensity.compact,
+                          ),
                       ],
                     ),
                   ],
                   const SizedBox(height: 16),
-                  Text('Ofertas', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Ofertas',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
                   ...offers.when(
-                    loading: () => [const Center(child: CircularProgressIndicator())],
+                    loading: () => [
+                      const Center(child: CircularProgressIndicator()),
+                    ],
                     error: (e, _) => [Text('Error al cargar ofertas: $e')],
                     data: (list) => list.isEmpty
-                        ? [const Text('Todavía no encontramos ofertas para este producto.')]
+                        ? [
+                            const Text(
+                              'Todavía no encontramos ofertas para este producto.',
+                            ),
+                          ]
                         : _buildOffers(list, freshness),
                   ),
                   const SizedBox(height: 24),
@@ -68,8 +94,14 @@ class ProductScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildOffers(List<StoreOffer> offers, Map<String, int> freshness) {
-    bool fresh(StoreOffer o) => isFresh(o.lastCheckedAt, freshness[o.storeCode] ?? defaultFreshnessMinutes);
+  List<Widget> _buildOffers(
+    List<StoreOffer> offers,
+    Map<String, int> freshness,
+  ) {
+    bool fresh(StoreOffer o) => isFresh(
+      o.lastCheckedAt,
+      freshness[o.storeCode] ?? defaultFreshnessMinutes,
+    );
     final comparison = compareOffers(offers, fresh);
     return [
       ComparisonHeader(comparison: comparison, totalOffers: offers.length),
@@ -95,7 +127,11 @@ class ProductScreen extends ConsumerWidget {
 
 /// Resumen de la comparación: mejor precio, tiendas comparadas y ahorro posible (RF-04).
 class ComparisonHeader extends StatelessWidget {
-  const ComparisonHeader({super.key, required this.comparison, required this.totalOffers});
+  const ComparisonHeader({
+    super.key,
+    required this.comparison,
+    required this.totalOffers,
+  });
 
   final OfferComparison comparison;
   final int totalOffers;
@@ -128,7 +164,9 @@ class ComparisonHeader extends StatelessWidget {
             Text(
               '${formatCents(best.priceCents)} en ${best.storeName}',
               key: const Key('best-price'),
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
