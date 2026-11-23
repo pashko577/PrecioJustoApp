@@ -4,12 +4,17 @@ DateTime? _date(Object? value) => value is Timestamp ? value.toDate() : null;
 int? _int(Object? value) => value is num ? value.toInt() : null;
 
 class Category {
-  const Category({required this.slug, required this.name, this.parentSlug, this.order = 0});
+  const Category({required this.slug, required this.name, this.parentSlug, this.order = 0, this.icon});
 
   final String slug;
   final String name;
   final String? parentSlug;
   final int order;
+
+  /// Nombre de ícono Material (por ejemplo, "devices"); ver `categoryIcon`.
+  final String? icon;
+
+  bool get isTopLevel => parentSlug == null;
 
   factory Category.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -18,6 +23,7 @@ class Category {
       name: d['name'] as String? ?? doc.id,
       parentSlug: d['parentSlug'] as String?,
       order: _int(d['order']) ?? 0,
+      icon: d['icon'] as String?,
     );
   }
 }
@@ -60,7 +66,11 @@ class Product {
     required this.categorySlug,
     this.model,
     this.imageUrl,
+    this.description = '',
     this.attributes = const {},
+    this.identifiers = const {},
+    this.searchTokens = const [],
+    this.status = 'ACTIVE',
     this.summary = const PriceSummary(),
   });
 
@@ -70,7 +80,15 @@ class Product {
   final String categorySlug;
   final String? model;
   final String? imageUrl;
+  final String description;
   final Map<String, dynamic> attributes;
+
+  /// Códigos comerciales, por ejemplo `{"EAN": ["0740617340456"]}`.
+  final Map<String, List<String>> identifiers;
+
+  /// Palabras y prefijos normalizados (ver `search_normalizer.dart`).
+  final List<String> searchTokens;
+  final String status;
   final PriceSummary summary;
 
   factory Product.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -82,7 +100,14 @@ class Product {
       categorySlug: d['categorySlug'] as String? ?? '',
       model: d['model'] as String?,
       imageUrl: d['imageUrl'] as String?,
+      description: d['description'] as String? ?? '',
       attributes: Map<String, dynamic>.from(d['attributes'] as Map? ?? const {}),
+      identifiers: {
+        for (final e in (d['identifiers'] as Map? ?? const {}).entries)
+          e.key.toString(): List<String>.from(e.value as List? ?? const []),
+      },
+      searchTokens: List<String>.from(d['searchTokens'] as List? ?? const []),
+      status: d['status'] as String? ?? 'ACTIVE',
       summary: PriceSummary.fromMap(d['summary'] as Map<String, dynamic>?),
     );
   }

@@ -1,7 +1,11 @@
-"""Carga datos de ejemplo FICTICIOS en el emulador de Firestore.
+"""Carga datos de ejemplo en el EMULADOR de Firestore.
+
+- Árbol real de categorías (`app/data/categories.json`).
+- Catálogo de ejemplo sin precios (`app/data/sample_products.json`).
+- 4 productos con ofertas FICTICIAS de dos tiendas demo, para probar la comparación.
 
 Uso (con los emuladores levantados):
-    set FIRESTORE_EMULATOR_HOST=127.0.0.1:8085      (PowerShell: $env:FIRESTORE_EMULATOR_HOST="127.0.0.1:8085")
+    PowerShell: $env:FIRESTORE_EMULATOR_HOST="127.0.0.1:8085"
     python -m app.admin.seed
 
 Por seguridad, se niega a ejecutarse contra un proyecto real.
@@ -14,57 +18,82 @@ from datetime import datetime, timedelta, timezone
 
 from firebase_admin import firestore
 
+from app.admin.categories import upload_categories
+from app.admin.import_products import load_products, write_products
+from app.catalog import (
+    CATEGORIES_FILE,
+    NO_PRICE_SORT_VALUE,
+    ProductInput,
+    build_product_doc,
+    flatten_categories,
+)
 from app.firebase_client import get_db, using_emulator
-from app.normalizers.text import normalize_text, search_tokens
 
 NOW = datetime.now(timezone.utc)
-
-CATEGORIES = [
-    {"slug": "tecnologia", "name": "Tecnología", "parentSlug": None, "order": 1},
-    {"slug": "computacion", "name": "Computación", "parentSlug": "tecnologia", "order": 2},
-    {"slug": "ssd", "name": "Discos SSD", "parentSlug": "computacion", "order": 3},
-    {"slug": "memorias-ram", "name": "Memorias RAM", "parentSlug": "computacion", "order": 4},
-    {"slug": "monitores", "name": "Monitores", "parentSlug": "tecnologia", "order": 5},
-]
+FRESHNESS_MINUTES = 12 * 60
+SAMPLE_PRODUCTS_FILE = CATEGORIES_FILE.parent / "sample_products.json"
 
 STORES = [
     {"code": "DEMO_STORE", "name": "Tienda Demo", "baseUrl": "https://demo.example.com"},
     {"code": "DEMO_STORE_B", "name": "Tienda Demo B", "baseUrl": "https://demo-b.example.com"},
 ]
 
-# (id, categoría, marca, modelo, nombre, atributos, [(tienda, sku, precio_céntimos, disponibilidad, envío, horas_desde_verificación)])
-PRODUCTS = [
-    ("kingston-nv3-1tb", "ssd", "Kingston", "NV3", "Kingston NV3 1TB SSD NVMe PCIe 4.0",
-     {"capacity": "1tb", "interface": "pcie 4.0"},
+# (producto, [(tienda, sku, precio_céntimos, disponibilidad, envío, horas_desde_verificación)])
+DEMO_OFFERS: list[tuple[ProductInput, list[tuple]]] = [
+    (ProductInput(id="kingston-nv3-1tb", category="ssd", brand="Kingston", model="NV3",
+                  name="Kingston NV3 1TB SSD NVMe PCIe 4.0",
+                  attributes={"capacidad": "1 TB", "interfaz": "PCIe 4.0"},
+                  identifiers={"EAN": ["0740617340456"]}),  # EAN FICTICIO (igual al de la página demo)
      [("DEMO_STORE", "KNV3-1TB", 24990, "AVAILABLE", 1000, 2),
       ("DEMO_STORE_B", "B-778", 25990, "AVAILABLE", None, 3)]),
-    ("samsung-990-evo-plus-1tb", "ssd", "Samsung", "990 EVO Plus", "Samsung 990 EVO Plus 1TB SSD NVMe",
-     {"capacity": "1tb", "interface": "pcie 4.0"},
+    (ProductInput(id="samsung-990-evo-plus-1tb", category="ssd", brand="Samsung", model="990 EVO Plus",
+                  name="Samsung 990 EVO Plus 1TB SSD NVMe",
+                  attributes={"capacidad": "1 TB", "interfaz": "PCIe 4.0"}),
      [("DEMO_STORE", "SAM-990-1TB", 38900, "PREORDER", 0, 2),
       ("DEMO_STORE_B", "B-912", 36990, "AVAILABLE", 1500, 30)]),  # desactualizada (> vigencia)
-    ("kingston-fury-beast-16gb-ddr5", "memorias-ram", "Kingston", "Fury Beast", "Kingston Fury Beast 16GB DDR5 5600MHz",
-     {"capacity": "16gb", "type": "ddr5", "speed": "5600mhz"},
+    (ProductInput(id="kingston-fury-beast-16gb-ddr5", category="memorias-ram", brand="Kingston", model="Fury Beast",
+                  name="Kingston Fury Beast 16GB DDR5 5600MHz",
+                  attributes={"capacidad": "16 GB", "tipo": "DDR5", "velocidad": "5600 MHz"}),
      [("DEMO_STORE_B", "B-301", 21990, "AVAILABLE", None, 1)]),
-    ("lg-27-ultragear-27gs60f", "monitores", "LG", "27GS60F", "Monitor LG UltraGear 27 pulgadas 180Hz",
-     {"size": "27in", "refresh": "180hz"},
+    (ProductInput(id="lg-ultragear-27gs60f", category="monitores", brand="LG", model="27GS60F",
+                  name="Monitor LG UltraGear 27 pulgadas 180Hz",
+                  attributes={"tamano": "27", "frecuencia": "180 Hz"}),
      [("DEMO_STORE", "LG-27GS60F", 69900, "OUT_OF_STOCK", None, 4)]),
 ]
 
-FRESHNESS_MINUTES = 12 * 60
+
+def compute_summary(offers: list[tuple]) -> dict:
+    """Resumen de precios (RN-01, RN-02): mínimo solo entre ofertas vigentes y disponibles."""
+    verified = [
+        (price, store)
+        for store, _, price, availability, _, hours in offers
+        if availability == "AVAILABLE" and timedelta(hours=hours) <= timedelta(minutes=FRESHNESS_MINUTES)
+    ]
+    best = min(verified) if verified else None
+    return {
+        "currency": "PEN",
+        "minPriceCents": best[0] if best else None,
+        "minPriceStoreCode": best[1] if best else None,
+        "maxPriceCents": max(o[2] for o in offers),
+        "sortPriceCents": best[0] if best else NO_PRICE_SORT_VALUE,
+        "offerCount": len(offers),
+        "verifiedOfferCount": len(verified),
+        "lastCheckedAt": max(NOW - timedelta(hours=o[5]) for o in offers),
+    }
 
 
 def seed(db) -> None:
-    batch = db.batch()
+    categories = flatten_categories()
+    upload_categories(db, categories)
+    valid = {c["slug"] for c in categories}
+    write_products(db, load_products(SAMPLE_PRODUCTS_FILE, valid))
 
+    batch = db.batch()
     batch.set(db.document("config/app"), {
         "defaultFreshnessMinutes": FRESHNESS_MINUTES,
         "freePlanLimits": {"favorites": 50, "alerts": 5, "wishlists": 3},
         "minAppVersion": "0.1.0",
     })
-
-    for c in CATEGORIES:
-        batch.set(db.document(f"categories/{c['slug']}"), {**c, "description": "", "status": "ACTIVE"})
-
     for s in STORES:
         batch.set(db.document(f"stores/{s['code']}"), {
             "name": s["name"], "baseUrl": s["baseUrl"], "countryCode": "PE",
@@ -76,14 +105,14 @@ def seed(db) -> None:
         })
     store_names = {s["code"]: s["name"] for s in STORES}
 
-    for pid, cat, brand, model, name, attrs, offers in PRODUCTS:
-        verified = []
+    for product, offers in DEMO_OFFERS:
+        pid, data = build_product_doc(product, valid)
         for store, sku, price, availability, shipping, hours_ago in offers:
             checked = NOW - timedelta(hours=hours_ago)
             sp_id = f"{store}__{sku}"
             batch.set(db.document(f"storeProducts/{sp_id}"), {
                 "storeCode": store, "storeName": store_names[store], "externalProductId": sku,
-                "productId": pid, "variantId": None, "title": name,
+                "productId": pid, "variantId": None, "title": data["displayName"],
                 "productUrl": f"https://demo.example.com/p/{sku}", "imageUrl": None,
                 "sellerName": store_names[store], "condition": "NEW",
                 "matchStatus": "MATCHED_MANUAL", "matchScore": 100,
@@ -102,30 +131,12 @@ def seed(db) -> None:
                     {"t": checked, "p": price, "a": availability, "s": shipping},
                 ],
             })
-            is_fresh = (NOW - checked) <= timedelta(minutes=FRESHNESS_MINUTES)
-            if is_fresh and availability == "AVAILABLE":
-                verified.append((price, store))
-
-        all_prices = [o[2] for o in offers]
-        best = min(verified) if verified else None
         batch.set(db.document(f"products/{pid}"), {
-            "categorySlug": cat, "brand": brand, "model": model,
-            "normalizedName": normalize_text(name), "displayName": name,
-            "description": "", "imageUrl": None, "condition": "NEW", "status": "ACTIVE",
-            "identifiers": {}, "identifierKeys": [], "attributes": attrs, "variants": [],
-            "searchTokens": search_tokens(name, brand, model),
-            "summary": {
-                "currency": "PEN",
-                "minPriceCents": best[0] if best else None,
-                "minPriceStoreCode": best[1] if best else None,
-                "maxPriceCents": max(all_prices),
-                "offerCount": len(offers),
-                "verifiedOfferCount": len(verified),
-                "lastCheckedAt": max(NOW - timedelta(hours=o[5]) for o in offers),
-            },
-            "createdAt": firestore.SERVER_TIMESTAMP, "updatedAt": firestore.SERVER_TIMESTAMP,
+            **data,
+            "summary": compute_summary(offers),
+            "createdAt": firestore.SERVER_TIMESTAMP,
+            "updatedAt": firestore.SERVER_TIMESTAMP,
         })
-
     batch.commit()
 
 
@@ -134,7 +145,11 @@ def main() -> int:
         print("ERROR: define FIRESTORE_EMULATOR_HOST. Este script solo se ejecuta contra el emulador.")
         return 1
     seed(get_db())
-    print(f"Datos de ejemplo cargados: {len(CATEGORIES)} categorías, {len(STORES)} tiendas, {len(PRODUCTS)} productos.")
+    sample = len(load_products(SAMPLE_PRODUCTS_FILE, {c["slug"] for c in flatten_categories()}))
+    print(
+        f"Datos de ejemplo cargados: {len(flatten_categories())} categorías, {len(STORES)} tiendas, "
+        f"{sample + len(DEMO_OFFERS)} productos ({len(DEMO_OFFERS)} con ofertas)."
+    )
     return 0
 
 

@@ -191,7 +191,13 @@ El usuario podrá buscar productos por:
 
 > **Ejemplo:** una búsqueda de "Kingston NV3 1TB" debe permitir encontrar el producto aunque la tienda lo publique con otro orden de palabras, sin mezclar productos con capacidades diferentes.
 
-**Alcance en el MVP:** búsqueda por palabras normalizadas (minúsculas, sin tildes, unidades unificadas: `1tb`, `1000gb` → `1tb`) guardadas en cada producto (`searchTokens`). Firestore no ofrece búsqueda de texto completo ni tolerancia a errores ortográficos; esa capacidad se agregará en una fase posterior con un buscador externo (sección 21).
+**Alcance en el MVP (implementado en el sprint 3):**
+
+- Búsqueda por palabras normalizadas (minúsculas, sin tildes, unidades unificadas: `1000 GB` → `1tb`) guardadas en cada producto (`searchTokens`), **incluidos sus prefijos desde 3 letras**, para encontrar palabras incompletas ("kings nv3" → "Kingston NV3").
+- Todas las palabras de la búsqueda deben estar en el producto, así que "kingston 2tb" no muestra el modelo de 1 TB (regla 8.3).
+- Búsqueda por código de barras (8 a 14 dígitos) contra `identifierKeys`.
+- La normalización existe en Python (al guardar) y en Dart (al buscar). Ambas se prueban con los mismos casos en `shared/test_vectors/search_normalization.json`.
+- Firestore no ofrece búsqueda de texto completo ni tolerancia a errores ortográficos; esa capacidad se agregará en una fase posterior con un buscador externo (sección 21).
 
 ### RF-03. Catálogo de productos
 
@@ -623,11 +629,14 @@ Mientras no exista panel de administración, las tareas se harán con scripts en
 
 | Script | Función |
 |---|---|
+| `categories.py` ✅ | Cargar o actualizar el árbol de categorías (`app/data/categories.json`) |
+| `import_products.py` ✅ | Carga inicial de productos desde JSON; valida todo el archivo antes de escribir y no duplica |
+| `seed.py` ✅ | Datos de ejemplo en el emulador (categorías, catálogo de muestra y ofertas ficticias) |
 | `set_role.py` | Asignar rol `admin` u `operator` (custom claims de Firebase Auth) |
-| `seed.py` | Cargar datos de ejemplo en el emulador (categorías, tiendas, productos) |
 | `stores.py` | Crear, editar, activar o desactivar tiendas |
 | `review_matches.py` | Listar publicaciones `PENDING_REVIEW` y aprobarlas, rechazarlas o asociarlas a un producto |
-| `products.py` | Crear o corregir productos y atributos |
+
+Los scripts escriben en el **emulador** por defecto. Para el proyecto real exigen `--prod --yes` y credenciales (`GOOGLE_APPLICATION_CREDENTIALS` con un archivo **fuera** del repositorio, o `FIREBASE_SERVICE_ACCOUNT`). Rechazan `--prod` si detectan el emulador.
 
 La consola de Firebase sirve para consultas y correcciones puntuales. El panel web (Firebase Hosting, gratis) se construirá en una fase posterior.
 
@@ -867,7 +876,7 @@ Convenciones: montos en **céntimos (entero)** con sufijo `Cents`; fechas como `
 | identifierKeys | array\<string\> | `["EAN:0740617..."]` para buscar con `array-contains` |
 | attributes | map | `{ capacity: "1tb", interface: "pcie 4.0" }` (valores normalizados) |
 | variants | array\<map\> | `[{ id, name, attributes }]` |
-| searchTokens | array\<string\> | Palabras normalizadas para la búsqueda |
+| searchTokens | array\<string\> | Palabras normalizadas y sus prefijos (desde 3 letras) para la búsqueda |
 | summary | map | Ver abajo |
 | createdAt / updatedAt | timestamp | |
 
@@ -879,6 +888,7 @@ Convenciones: montos en **céntimos (entero)** con sufijo `Cents`; fechas como `
   "minPriceCents": 24990,
   "minPriceStoreCode": "STORE_A",
   "maxPriceCents": 27900,
+  "sortPriceCents": 24990,
   "offerCount": 3,
   "verifiedOfferCount": 2,
   "lastCheckedAt": "2026-11-22T22:00:00Z"
@@ -886,6 +896,8 @@ Convenciones: montos en **céntimos (entero)** con sufijo `Cents`; fechas como `
 ```
 
 `minPriceCents` considera solo ofertas **vigentes, disponibles y en la misma moneda** (RN-01, RN-02, RN-04).
+
+`sortPriceCents` es igual a `minPriceCents`, o `9999999999` si no hay precio verificado. Se usa para ordenar el catálogo en Firestore con los productos sin precio al final (Firestore pone los `null` primero y excluye los documentos sin el campo).
 
 #### `storeProducts/{storeCode}__{externalId}`
 
@@ -1011,8 +1023,9 @@ No hay API REST propia. La app usa **FlutterFire** y el motor usa el **Admin SDK
 
 | Pantalla / función | Consulta | Lecturas aprox. |
 |---|---|---|
-| Inicio / categoría | `products` where `categorySlug == X` and `status == ACTIVE` orderBy `summary.minPriceCents` limit 20 | 20 |
-| Búsqueda | `products` where `searchTokens array-contains <token más específico>` limit 30 (el resto de palabras se filtra en la app) | ≤ 30 |
+| Inicio / categoría | `products` where `categorySlug in [X y subcategorías]` and `status == ACTIVE` orderBy `summary.sortPriceCents` limit 21 (el extra indica si hay otra página); siguientes páginas con `startAfterDocument` | 21 por página |
+| Búsqueda | `products` where `searchTokens array-contains <palabra más larga>` and `status == ACTIVE` limit 40 (el resto de palabras se filtra en la app); espera 350 ms tras la última tecla | ≤ 40 |
+| Búsqueda por código | `products` where `identifierKeys array-contains-any [EAN:x, GTIN:x, UPC:x]` limit 10 | ≤ 10 |
 | Detalle de producto | `products/{id}` | 1 |
 | Comparar ofertas | `storeProducts` where `productId == X` orderBy `currentPriceCents` | N.° de tiendas |
 | Historial | `storeProducts/{id}/history/{YYYY-MM}` de los últimos 3 meses | 3 por oferta |
@@ -1261,7 +1274,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 |---|---|---|---|
 | 1 | Fundación técnica | Repositorio, proyecto Firebase, emuladores, app Flutter conectada, motor con prueba local, CI | ✅ |
 | 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
-| 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | |
+| 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
 | 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | |
 | 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | |

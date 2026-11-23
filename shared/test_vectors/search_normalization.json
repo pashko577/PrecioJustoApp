@@ -1,0 +1,21 @@
+{
+  "description": "Casos compartidos entre Python (scraping-engine/app/normalizers/text.py) y Dart (mobile_app/lib/core/search_normalizer.dart). 'normalized' = normalize_text(input); 'words' = word_tokens(input).",
+  "cases": [
+    { "input": "Kingston NV3 1TB", "normalized": "kingston nv3 1tb", "words": ["1tb", "kingston", "nv3"] },
+    { "input": "Disco sólido Kingston NV3 de 1000 GB", "normalized": "disco solido kingston nv3 de 1tb", "words": ["1tb", "disco", "kingston", "nv3", "solido"] },
+    { "input": "SSD Kingston 1TB PCIe 4.0 NV3", "normalized": "ssd kingston 1tb pcie 4.0 nv3", "words": ["1tb", "4.0", "kingston", "nv3", "pcie", "ssd"] },
+    { "input": "Kingston NV3 2000 GB", "normalized": "kingston nv3 2tb", "words": ["2tb", "kingston", "nv3"] },
+    { "input": "RAM 16 GB 5600 MHz", "normalized": "ram 16gb 5600mhz", "words": ["16gb", "5600mhz", "ram"] },
+    { "input": "Disco 1,5 TB", "normalized": "disco 1.5tb", "words": ["1.5tb", "disco"] },
+    { "input": "Disco 1.0 TB", "normalized": "disco 1tb", "words": ["1tb", "disco"] },
+    { "input": "Memoria 512 GB", "normalized": "memoria 512gb", "words": ["512gb", "memoria"] },
+    { "input": "Fuente 650W 80+ Gold", "normalized": "fuente 650w 80+ gold", "words": ["650w", "80+", "fuente", "gold"] },
+    { "input": "Monitor LG UltraGear 27\" 180Hz", "normalized": "monitor lg ultragear 27 180hz", "words": ["180hz", "27", "lg", "monitor", "ultragear"] },
+    { "input": "Cámara Año Niño Pingüino Ñandú", "normalized": "camara ano nino pinguino nandu", "words": ["ano", "camara", "nandu", "nino", "pinguino"] },
+    { "input": "  Laptop   ASUS—Vivobook (2025)  ", "normalized": "laptop asus vivobook 2025", "words": ["2025", "asus", "laptop", "vivobook"] },
+    { "input": "Galaxy S24 Ultra, 256GB / Negro", "normalized": "galaxy s24 ultra 256gb negro", "words": ["256gb", "galaxy", "negro", "s24", "ultra"] },
+    { "input": "Zapatillas para correr de la marca X", "normalized": "zapatillas para correr de la marca x", "words": ["correr", "marca", "zapatillas"] },
+    { "input": "iPhone 15 Pro - 128 GB", "normalized": "iphone 15 pro - 128gb", "words": ["128gb", "15", "iphone", "pro"] },
+    { "input": "", "normalized": "", "words": [] }
+  ]
+}

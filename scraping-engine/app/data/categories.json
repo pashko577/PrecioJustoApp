@@ -1,0 +1,57 @@
+[
+  { "slug": "tecnologia", "name": "Tecnología", "icon": "devices", "children": [
+    { "slug": "laptops", "name": "Laptops" },
+    { "slug": "celulares", "name": "Celulares" },
+    { "slug": "monitores", "name": "Monitores" },
+    { "slug": "procesadores", "name": "Procesadores" }
+  ]},
+  { "slug": "computacion", "name": "Computación", "icon": "memory", "children": [
+    { "slug": "ssd", "name": "Discos SSD" },
+    { "slug": "memorias-ram", "name": "Memorias RAM" },
+    { "slug": "placas-madre", "name": "Placas madre" },
+    { "slug": "tarjetas-graficas", "name": "Tarjetas gráficas" }
+  ]},
+  { "slug": "electrodomesticos", "name": "Electrodomésticos", "icon": "kitchen", "children": [
+    { "slug": "refrigeradoras", "name": "Refrigeradoras" },
+    { "slug": "lavadoras", "name": "Lavadoras" },
+    { "slug": "microondas", "name": "Microondas" }
+  ]},
+  { "slug": "hogar", "name": "Hogar", "icon": "chair", "children": [
+    { "slug": "muebles", "name": "Muebles" },
+    { "slug": "decoracion", "name": "Decoración" },
+    { "slug": "iluminacion", "name": "Iluminación" }
+  ]},
+  { "slug": "moda", "name": "Moda", "icon": "checkroom", "children": [
+    { "slug": "ropa", "name": "Ropa" },
+    { "slug": "calzado", "name": "Calzado" },
+    { "slug": "accesorios-moda", "name": "Accesorios" }
+  ]},
+  { "slug": "belleza", "name": "Belleza", "icon": "spa", "children": [
+    { "slug": "cuidado-personal", "name": "Cuidado personal" },
+    { "slug": "cosmeticos", "name": "Cosméticos" }
+  ]},
+  { "slug": "deportes", "name": "Deportes", "icon": "sports_soccer", "children": [
+    { "slug": "equipamiento-deportivo", "name": "Equipamiento" },
+    { "slug": "ropa-deportiva", "name": "Ropa deportiva" }
+  ]},
+  { "slug": "juguetes", "name": "Juguetes", "icon": "toys", "children": [
+    { "slug": "juegos", "name": "Juegos" },
+    { "slug": "juguetes-educativos", "name": "Juguetes educativos" }
+  ]},
+  { "slug": "bebes", "name": "Bebés", "icon": "child_care", "children": [
+    { "slug": "accesorios-bebe", "name": "Accesorios" },
+    { "slug": "cuidado-bebe", "name": "Productos de cuidado" }
+  ]},
+  { "slug": "automotriz", "name": "Automotriz", "icon": "directions_car", "children": [
+    { "slug": "accesorios-auto", "name": "Accesorios" },
+    { "slug": "repuestos", "name": "Repuestos" }
+  ]},
+  { "slug": "ferreteria", "name": "Ferretería", "icon": "handyman", "children": [
+    { "slug": "herramientas", "name": "Herramientas" },
+    { "slug": "materiales", "name": "Materiales" }
+  ]},
+  { "slug": "libros", "name": "Libros", "icon": "menu_book", "children": [
+    { "slug": "libros-fisicos", "name": "Libros físicos" },
+    { "slug": "material-educativo", "name": "Material educativo" }
+  ]}
+]

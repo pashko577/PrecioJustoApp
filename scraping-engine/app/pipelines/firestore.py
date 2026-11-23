@@ -16,7 +16,7 @@ from firebase_admin import firestore
 from app.firebase_client import get_db
 from app.models.offer import ScrapedOffer
 from app.pipelines.base import CrawlerAwarePipeline
-from app.normalizers.text import search_tokens
+from app.normalizers.text import word_tokens
 
 TRACKED_FIELDS = ("currentPriceCents", "availability", "currentShippingCents")
 
@@ -27,7 +27,7 @@ def build_store_product(offer: ScrapedOffer, store_name: str) -> dict:
         "storeName": store_name,
         "externalProductId": offer.external_product_id,
         "title": offer.title,
-        "titleTokens": search_tokens(offer.title, offer.brand, offer.model),
+        "titleTokens": word_tokens(offer.title, offer.brand, offer.model),
         "brand": offer.brand,
         "model": offer.model,
         "identifiers": offer.identifiers,

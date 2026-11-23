@@ -11,6 +11,7 @@ import '../features/auth/profile_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/catalog/home_screen.dart';
 import '../features/catalog/product_screen.dart';
+import '../features/catalog/search_screen.dart';
 
 /// Pantallas de acceso: si ya hay sesión, no tiene sentido mostrarlas.
 const authPaths = {'/login', '/register', '/forgot-password'};
@@ -68,6 +69,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) => ProductScreen(productId: state.pathParameters['id']!),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (_, state) => SearchScreen(initialQuery: state.uri.queryParameters['q'] ?? ''),
       ),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),

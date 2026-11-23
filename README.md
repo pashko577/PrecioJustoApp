@@ -76,6 +76,22 @@ firebase emulators:start --project demo-precio-justo   # con "host": "0.0.0.0" e
 flutter run --dart-define=EMULATOR_HOST=192.168.X.X     # IP de tu PC en la red local
 ```
 
+## Administración del catálogo
+
+Los scripts escriben en el **emulador** por defecto (requiere `FIRESTORE_EMULATOR_HOST`):
+
+```powershell
+cd scraping-engine
+$env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085"
+.venv\Scripts\python -m app.admin.categories                                   # árbol de categorías
+.venv\Scripts\python -m app.admin.import_products app/data/sample_products.json # carga de productos
+.venv\Scripts\python -m app.admin.import_products mi_archivo.json --dry-run     # solo validar
+```
+
+Para el **proyecto real**: quitar `FIRESTORE_EMULATOR_HOST`, apuntar `GOOGLE_APPLICATION_CREDENTIALS` a la clave de la cuenta de servicio (guardada **fuera** del repositorio) y agregar `--prod --yes`.
+
+Formato de productos: ver el encabezado de [import_products.py](scraping-engine/app/admin/import_products.py) y el ejemplo [sample_products.json](scraping-engine/app/data/sample_products.json).
+
 ## Pruebas
 
 ```bash
