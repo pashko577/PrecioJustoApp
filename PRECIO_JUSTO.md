@@ -636,6 +636,12 @@ El detalle de cada evaluación está en `scraping-engine/app/data/stores.json`.
 | SercoPlus | PrestaShop | ✅ Activa (12 h) | Responde sin desafío de Cloudflare; precio en soles publicado por la tienda junto al de dólares |
 | Memory Kings | Sitio propio | ✅ Activa (12 h) | robots.txt solo bloquea su buscador; no publica términos (revisión legal antes del lanzamiento) |
 | Impacto | Next.js | ⏸ Pendiente | Solo publica precios en dólares y su listado usa un buscador externo con una clave que no es nuestra |
+| Metro | VTEX | ✅ Activa (12 h) | Términos sin prohibición de extracción; su política antifraude sobre bots se refiere a cuentas de usuario (el extractor no usa cuentas) |
+| Ripley | Next.js | ⏸ Pendiente | Sus términos (Zendesk) responden 403 a lectores automáticos: hay que leerlos a mano antes de decidir |
+| Carsa | VTEX | ❌ No viable | "el Usuario debe abstenerse de extraer y/o reutilizar partes del Contenido sin el consentimiento previo y expreso" |
+| LG (tienda oficial) | Propia | ❌ No viable | "Ninguna de la información en este sitio puede ser copiada [...] para propósitos comerciales sin el consentimiento por escrito" |
+| Samsung (tienda oficial) | Hybris | ❌ No viable | Prohíbe reproducir sus textos "excepto para su uso personal" |
+| Max | — | ❌ Descartada | El dominio no responde |
 | Tottus | — | ⏸ Baja prioridad | Supermercado con poca oferta en las categorías actuales |
 | Wong | VTEX | ⏸ Pendiente | No se pudieron leer los términos |
 | Falabella, Sodimac | — | ❌ No viable | Sus términos prohíben reproducir o explotar contenidos y "compilaciones de datos" sin consentimiento escrito |
@@ -1351,7 +1357,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
 | 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
 | 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | ✅ Coolbox (falta el secret de producción) |
-| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 8 tiendas (Coolbox, Plaza Vea, Oechsle, Promart con VTEX; Efe y La Curacao con Magento; SercoPlus con PrestaShop; Memory Kings) y asociación entre plataformas |
+| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 9 tiendas (Coolbox, Plaza Vea, Oechsle, Promart, Metro con VTEX; Efe y La Curacao con Magento; SercoPlus con PrestaShop; Memory Kings) y asociación entre plataformas |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | ✅ Gráfico escalonado por tienda, cifras de 30/90 días (promedio ponderado por tiempo) y tabla de datos |
 | 7 | Seguimiento | Favoritos, listas y alertas | ✅ Favoritos (con cambio de precio desde que se guardó), listas, alertas (una por producto, "¡Ya cumple!") y límites del plan gratuito |
 | 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | ✅ Evaluación RN-08 tras cada corrida, bandeja con no leídas y push FCM (Android/iOS; web pendiente) |

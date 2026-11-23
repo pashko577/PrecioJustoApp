@@ -30,6 +30,7 @@ def build_spider_class(store: dict) -> type[VtexSpider]:
         "base_url": store["baseUrl"].rstrip("/"),
         "allowed_domains": [urlparse(store["baseUrl"]).netloc],
         "categories": dict(store.get("vtexCategories") or {}),
+        "internal_sellers": tuple(store.get("vtexInternalSellers") or ()),
     })
 
 

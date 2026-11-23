@@ -89,7 +89,7 @@ Probar contra el emulador (una página por categoría, ~1 minuto, pausas de 5 s 
 cd scraping-engine
 $env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085"
 .venv\Scripts\python -m app.admin.seed
-.venv\Scripts\scrapy crawl coolbox -a max_pages=1     # también: plazavea, oechsle, promart, efe, lacuracao, sercoplus, memorykings
+.venv\Scripts\scrapy crawl coolbox -a max_pages=1     # también: plazavea, oechsle, promart, metro, efe, lacuracao, sercoplus, memorykings
 ```
 
 En producción lo ejecuta el workflow [scrape.yml](.github/workflows/scrape.yml) cada 6 horas, **solo si existe el secret `FIREBASE_SERVICE_ACCOUNT`**:

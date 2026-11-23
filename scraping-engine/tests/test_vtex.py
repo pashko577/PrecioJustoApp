@@ -67,8 +67,8 @@ def test_identifiers_are_canonical():
 def test_default_seller_is_used_not_cheapest_marketplace_seller():
     offers, _ = all_offers()
     ssd = offers["90021"]
-    assert ssd.seller == "Tienda Demo S.A.C."
-    assert ssd.price_cents == 20900
+    assert ssd.seller is None  # vendedor "1" = la propia tienda (no se muestra como externo)
+    assert ssd.price_cents == 20900  # no el precio del vendedor de marketplace
 
 
 def test_refurbished_detected_from_category():
@@ -218,3 +218,10 @@ def test_pick_mpn_prefers_real_model_code():
     assert pick_mpn({"productReference": "20608011"}) is None
     assert pick_mpn({"productReference": "", "Modelo": ["Sin código"]}) is None
     assert looks_like_model_code("LS51BPP") and not looks_like_model_code("148753")
+
+
+def test_internal_sellers_are_the_store_itself():
+    from app.spiders.vtex.base import seller_name
+    assert seller_name({"sellerId": "1", "sellerName": "CENCOSUD RETAIL PERU S.A."}) is None
+    assert seller_name({"sellerId": "wongiononfood", "sellerName": "wongiononfood"}, ("wongio",)) is None
+    assert seller_name({"sellerId": "lgperu", "sellerName": "LG Perú"}, ("wongio",)) == "LG Perú"

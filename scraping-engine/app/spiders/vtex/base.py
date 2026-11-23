@@ -113,8 +113,21 @@ def _default_seller(item: dict) -> dict | None:
     return next((s for s in sellers if s.get("sellerDefault")), sellers[0] if sellers else None)
 
 
+def seller_name(seller: dict, internal_prefixes: tuple[str, ...] = ()) -> str | None:
+    """Nombre del vendedor; `None` si es la propia tienda.
+
+    Algunas tiendas venden con cuentas internas (Metro: "wongiononfood"); esas no son
+    vendedores externos y no deben mostrarse como tal.
+    """
+    seller_id = str(seller.get("sellerId") or "")
+    if seller_id == "1" or any(seller_id.startswith(p) for p in internal_prefixes):
+        return None
+    return (seller.get("sellerName") or "").strip() or None
+
+
 def offers_from_product(product: dict, *, store_code: str, category_slug: str | None,
-                        checked_at: datetime | None = None) -> tuple[list[ScrapedOffer], list[str]]:
+                        checked_at: datetime | None = None,
+                        internal_sellers: tuple[str, ...] = ()) -> tuple[list[ScrapedOffer], list[str]]:
     """Convierte un producto VTEX en ofertas (una por SKU/variante).
 
     Devuelve `(ofertas, avisos)`. Los avisos describen SKUs descartados (por ejemplo, sin precio).
@@ -161,7 +174,7 @@ def offers_from_product(product: dict, *, store_code: str, category_slug: str | 
             shipping_cents=None,  # el costo de envío depende de la dirección: desconocido
             availability="AVAILABLE" if available else "OUT_OF_STOCK",
             condition="REFURBISHED" if _REFURBISHED_RE.search(f"{title} {categories_text}") else "NEW",
-            seller=(seller.get("sellerName") or "").strip() or None,
+            seller=seller_name(seller, internal_sellers),
             identifiers=identifiers,
             category_hint=category_slug,
             product_url=product.get("link") or "",
@@ -178,6 +191,7 @@ class VtexSpider(scrapy.Spider):
     base_url: str = ""
     # Ruta de categoría VTEX (ids, por ejemplo "/47/65/") -> slug de nuestra categoría.
     categories: dict[str, str] = {}
+    internal_sellers: tuple[str, ...] = ()  # prefijos de sellerId que son la propia tienda
 
     handle_httpstatus_list = list(STOP_STATUSES)
     custom_settings = {
@@ -242,7 +256,8 @@ class VtexSpider(scrapy.Spider):
         checked_at = datetime.now(timezone.utc)
         for product in products:
             offers, warnings = offers_from_product(
-                product, store_code=self.store_code, category_slug=slug, checked_at=checked_at
+                product, store_code=self.store_code, category_slug=slug, checked_at=checked_at,
+                internal_sellers=self.internal_sellers,
             )
             for warning in warnings:
                 self.crawler.stats.inc_value("offers/skipped")

@@ -138,6 +138,38 @@
     }
   },
   {
+    "code": "METRO",
+    "name": "Metro",
+    "baseUrl": "https://www.metro.pe",
+    "platform": "VTEX",
+    "spider": "metro",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "User-agent * solo bloquea /img/, /account/, /login/, /checkout/, /quick-view/, /espiar/ y /buscapagina/. La API pública de catálogo VTEX no está bloqueada.",
+      "terms": "Términos y condiciones de Cencosud Retail Perú (/institucional/terminos-y-condiciones). Regulan compras, despachos, cambios y datos personales. Sin cláusulas sobre extracción, reproducción de contenidos ni propiedad intelectual. La sección 25 'Política Antifraude' menciona 'comportamiento automatizado o uso de bots no autorizados' como causa para anular CUENTAS de usuario; el extractor no usa cuentas, no compra ni participa en promociones.",
+      "conclusion": "Viable con extracción responsable: API pública de catálogo VTEX, 1 solicitud a la vez, pausa de 5 s, detenerse ante 429/403, cada 12 h. No mostrar fotos. Requiere revisión legal antes del lanzamiento comercial (13.3), en especial por la cláusula antifraude.",
+      "notes": "Supermercado: pocas laptops y sin monitores, SSD ni taladros en la búsqueda. Ids obtenidos con búsquedas espaciadas (20 s)."
+    },
+    "vtexCategories": {
+      "/1000144/1000025/1000118/": "laptops",
+      "/1000003/1000127/1000020/": "refrigeradoras",
+      "/1000003/1000128/1000021/": "lavadoras",
+      "/1000003/1000126/1000024/": "microondas"
+    },
+    "vtexCategoryNames": {
+      "/1000144/1000025/1000118/": "Tecnología > Cómputo > Laptops",
+      "/1000003/1000127/1000020/": "Electrohogar > Refrigeración > Refrigeradoras",
+      "/1000003/1000128/1000021/": "Electrohogar > Lavado y Secado > Lavadoras",
+      "/1000003/1000126/1000024/": "Electrohogar > Cocina > Microondas"
+    },
+    "vtexInternalSellers": [
+      "wongio"
+    ]
+  },
+  {
     "code": "WONG",
     "name": "Wong",
     "baseUrl": "https://www.wong.pe",
