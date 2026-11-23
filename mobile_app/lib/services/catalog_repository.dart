@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/offer_rules.dart';
+import '../core/price_history.dart';
 import '../core/search_normalizer.dart';
 import '../models/models.dart';
 
@@ -95,6 +96,22 @@ class CatalogRepository {
         .get();
     return snap.docs.map(StoreOffer.fromDoc).toList();
   }
+
+  /// Historial de precios de las ofertas en los últimos [days] días (RF-05).
+  /// Lee un documento `history/{YYYY-MM}` por oferta y por mes, en paralelo.
+  Future<List<OfferHistory>> history(List<StoreOffer> offers, {required int days, DateTime? now}) async {
+    final months = monthsCovering(now ?? DateTime.now().toUtc(), days);
+    return Future.wait(offers.map((offer) async {
+      final docs = await Future.wait(months.map(
+        (m) => _db.collection('storeProducts').doc(offer.id).collection('history').doc(m).get(),
+      ));
+      final data = [for (final d in docs) if (d.exists) d.data()!];
+      return OfferHistory(offer: offer, points: parseHistoryPoints(data, _toUtc));
+    }));
+  }
+
+  static DateTime _toUtc(Object? value) =>
+      value is Timestamp ? value.toDate().toUtc() : DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
   /// Vigencia y última corrida completa por tienda. Pocas tiendas: una sola lectura de la colección.
   Future<Map<String, StoreInfo>> stores() async {
@@ -206,6 +223,13 @@ class CatalogFeedNotifier extends AsyncNotifier<CatalogFeed> {
 }
 
 final catalogFeedProvider = AsyncNotifierProvider<CatalogFeedNotifier, CatalogFeed>(CatalogFeedNotifier.new);
+
+/// Historial de un producto para un periodo: clave `(productId, días)`.
+final historyProvider = FutureProvider.autoDispose.family<List<OfferHistory>, (String, int)>((ref, key) async {
+  final (productId, days) = key;
+  final offers = await ref.watch(offersProvider(productId).future);
+  return ref.watch(catalogRepositoryProvider).history(offers, days: days);
+});
 
 final searchResultsProvider = FutureProvider.autoDispose.family<List<Product>, String>(
   (ref, query) => ref.watch(catalogRepositoryProvider).search(query),

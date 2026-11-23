@@ -6,6 +6,7 @@ import '../../core/money.dart';
 import '../../core/offer_rules.dart';
 import '../../models/models.dart';
 import '../../services/catalog_repository.dart';
+import '../history/price_history_section.dart';
 import '../offers/offer_tile.dart';
 
 class ProductScreen extends ConsumerWidget {
@@ -53,6 +54,8 @@ class ProductScreen extends ConsumerWidget {
                         ? [const Text('Todavía no encontramos ofertas para este producto.')]
                         : _buildOffers(list, freshness),
                   ),
+                  const SizedBox(height: 24),
+                  PriceHistorySection(productId: productId),
                   const SizedBox(height: 12),
                   Text(
                     'Los precios son observaciones de PRECIO JUSTO en las tiendas y pueden cambiar. '

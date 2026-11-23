@@ -1316,7 +1316,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
 | 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | ✅ Coolbox (falta el secret de producción) |
 | 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 4 tiendas (Coolbox, Plaza Vea, Oechsle, Promart) |
-| 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | |
+| 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | ✅ Gráfico escalonado por tienda, cifras de 30/90 días (promedio ponderado por tiempo) y tabla de datos |
 | 7 | Seguimiento | Favoritos, listas y alertas | |
 | 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | |
 | 9 | Administración | Scripts de administración, revisión de coincidencias, respaldo semanal, segunda tienda | |
