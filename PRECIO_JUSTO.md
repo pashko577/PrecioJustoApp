@@ -1257,18 +1257,18 @@ El campo `users.plan` y `config/app.freePlanLimits` preparan el modelo. El cobro
 
 Diez sprints de dos semanas, pensados para **una persona**. La duración podrá ajustarse.
 
-| Sprint | Objetivo | Entregable |
-|---|---|---|
-| 1 | Fundación técnica | Repositorio, proyecto Firebase, emuladores, app Flutter conectada, motor con prueba local, CI |
-| 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta |
-| 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens |
-| 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado |
-| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios |
-| 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio |
-| 7 | Seguimiento | Favoritos, listas y alertas |
-| 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones |
-| 9 | Administración | Scripts de administración, revisión de coincidencias, respaldo semanal, segunda tienda |
-| 10 | Calidad y lanzamiento | Pruebas de reglas, política de privacidad, build de producción, publicación en Google Play |
+| Sprint | Objetivo | Entregable | Estado |
+|---|---|---|---|
+| 1 | Fundación técnica | Repositorio, proyecto Firebase, emuladores, app Flutter conectada, motor con prueba local, CI | ✅ |
+| 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
+| 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | |
+| 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | |
+| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | |
+| 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | |
+| 7 | Seguimiento | Favoritos, listas y alertas | |
+| 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | |
+| 9 | Administración | Scripts de administración, revisión de coincidencias, respaldo semanal, segunda tienda | |
+| 10 | Calidad y lanzamiento | Pruebas de reglas, política de privacidad, build de producción, publicación en Google Play | |
 
 ---
 

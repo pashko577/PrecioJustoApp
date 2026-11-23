@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/money.dart';
 import '../../models/models.dart';
 import '../../services/catalog_repository.dart';
+import '../auth/auth_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -14,9 +15,20 @@ class HomeScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
     final selected = ref.watch(selectedCategoryProvider);
     final products = ref.watch(productsProvider);
+    final isSignedIn = ref.watch(authStateProvider).value != null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('PRECIO JUSTO')),
+      appBar: AppBar(
+        title: const Text('PRECIO JUSTO'),
+        actions: [
+          IconButton(
+            key: const Key('account-button'),
+            tooltip: isSignedIn ? 'Mi cuenta' : 'Iniciar sesión',
+            icon: Icon(isSignedIn ? Icons.account_circle : Icons.account_circle_outlined),
+            onPressed: () => context.push(isSignedIn ? '/profile' : '/login'),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(categoriesProvider);

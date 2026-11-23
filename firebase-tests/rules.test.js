@@ -6,7 +6,7 @@ import {
   assertSucceeds,
   assertFails,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 let env;
 
@@ -104,4 +104,49 @@ test('favoritos: el ID del documento debe coincidir con productId', async () => 
 
 test('scrapingJobs: nadie escribe desde la app', async () => {
   await assertFails(setDoc(doc(admin(), 'scrapingJobs/j1'), { status: 'SUCCESS' }));
+});
+
+// ---------- Flujos del sprint 2 (mismas escrituras que FirebaseAuthRepository) ----------
+
+test('registro: el perfil tal como lo crea la app está permitido', async () => {
+  await assertSucceeds(setDoc(doc(user('nuevo'), 'users/nuevo'), {
+    email: 'nuevo@correo.pe',
+    displayName: 'Nuevo',
+    plan: 'FREE',
+    notificationPrefs: { push: true, priceAlerts: true, backInStock: true, weeklySummary: false },
+    status: 'ACTIVE',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }));
+});
+
+test('perfil: cambiar nombre y preferencias está permitido', async () => {
+  const ref = doc(user('ana'), 'users/ana');
+  await assertSucceeds(updateDoc(ref, { displayName: 'Ana María', updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(ref, {
+    notificationPrefs: { push: false, priceAlerts: true, backInStock: true, weeklySummary: true },
+    updatedAt: serverTimestamp(),
+  }));
+});
+
+test('perfil: no se puede alterar createdAt', async () => {
+  await assertFails(updateDoc(doc(user('ana'), 'users/ana'), { createdAt: serverTimestamp() }));
+});
+
+test('eliminar cuenta: el dueño puede borrar subcolecciones y perfil', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const db = ctx.firestore();
+    for (const sub of ['favorites', 'wishlists', 'alerts', 'devices', 'notifications']) {
+      await setDoc(doc(db, `users/ana/${sub}/x`), { productId: 'x' });
+    }
+  });
+  const db = user('ana');
+  for (const sub of ['favorites', 'wishlists', 'alerts', 'devices', 'notifications']) {
+    await assertSucceeds(deleteDoc(doc(db, `users/ana/${sub}/x`)));
+  }
+  await assertSucceeds(deleteDoc(doc(db, 'users/ana')));
+});
+
+test('eliminar cuenta: nadie puede borrar el perfil de otro', async () => {
+  await assertFails(deleteDoc(doc(user('luis'), 'users/ana')));
 });

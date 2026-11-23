@@ -1,37 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../features/catalog/home_screen.dart';
-import '../features/catalog/product_screen.dart';
+import 'router.dart';
 
-final router = GoRouter(
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (_, _) => const HomeScreen(),
-      routes: [
-        GoRoute(
-          path: 'product/:id',
-          builder: (_, state) => ProductScreen(productId: state.pathParameters['id']!),
-        ),
-      ],
-    ),
-  ],
-);
-
-class PrecioJustoApp extends StatelessWidget {
+class PrecioJustoApp extends ConsumerWidget {
   const PrecioJustoApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'PRECIO JUSTO',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F7B5F)),
-        useMaterial3: true,
-      ),
-      routerConfig: router,
+      theme: buildTheme(),
+      routerConfig: ref.watch(routerProvider),
     );
   }
 }
+
+ThemeData buildTheme() => ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F7B5F)),
+      useMaterial3: true,
+      inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
+    );
