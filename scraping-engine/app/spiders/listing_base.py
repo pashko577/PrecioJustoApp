@@ -2,7 +2,7 @@
 
 Cada plataforma define cómo se arma la URL de una página (`page_url`) y cómo se lee un
 listado (`parse_body`). Esta base aporta las reglas de extracción responsable
-(PRECIO_JUSTO.md, 7.7): una solicitud a la vez con pausa, frecuencia por tienda, y se
+(COMPRA_MEJOR.md, 7.7): una solicitud a la vez con pausa, frecuencia por tienda, y se
 DETIENE ante HTTP 403/429/503 o un desafío anti-bots (no lo evade).
 
 Los spiders se generan desde `app/data/stores.json` con `build_registry`.

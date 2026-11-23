@@ -1,6 +1,6 @@
 # precio_justo
 
-PRECIO JUSTO - comparador de precios
+CompraMejor - comparador de precios
 
 ## Getting Started
 

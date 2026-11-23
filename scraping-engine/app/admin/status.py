@@ -68,7 +68,7 @@ def _ago(value: datetime | None, now: datetime) -> str:
 def render(report: dict, markdown: bool) -> str:
     now = report["now"]
     if markdown:
-        lines = ["## Estado de PRECIO JUSTO", "",
+        lines = ["## Estado de CompraMejor", "",
                  "| Tienda | Estado | Última corrida completa | Último resultado | Publicaciones activas |",
                  "|---|---|---|---|---|"]
         icon = {OK: "✅", STALE: "⚠️", NEVER: "⏳", DISABLED: "⏸️"}

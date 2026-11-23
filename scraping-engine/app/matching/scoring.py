@@ -1,4 +1,4 @@
-"""Puntuación de coincidencia entre una publicación y un producto (PRECIO_JUSTO.md, sección 8).
+"""Puntuación de coincidencia entre una publicación y un producto (COMPRA_MEJOR.md, sección 8).
 
 Funciones puras (sin Firestore) para poder probarlas a fondo.
 

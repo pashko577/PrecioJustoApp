@@ -4,7 +4,7 @@ Por defecto restaura en el EMULADOR (para verificar que el respaldo sirve). Rest
 producción sobrescribe documentos: exige `--prod --yes`.
 
 Uso:
-    python -m app.backup.restore salida/precio-justo-XXXX.jsonl.gz
+    python -m app.backup.restore salida/compramejor-XXXX.jsonl.gz
     python -m app.backup.restore archivo.jsonl.gz --prod --yes
 """
 

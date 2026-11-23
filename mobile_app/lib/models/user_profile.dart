@@ -40,7 +40,7 @@ class NotificationPrefs {
       );
 }
 
-/// Documento `users/{uid}` (PRECIO_JUSTO.md, sección 9.3).
+/// Documento `users/{uid}` (COMPRA_MEJOR.md, sección 9.3).
 class UserProfile {
   const UserProfile({
     required this.uid,

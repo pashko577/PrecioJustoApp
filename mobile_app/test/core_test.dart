@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/core/money.dart';
-import 'package:precio_justo/core/offer_rules.dart';
-import 'package:precio_justo/models/models.dart';
-import 'package:precio_justo/services/catalog_repository.dart';
+import 'package:compramejor/core/money.dart';
+import 'package:compramejor/core/offer_rules.dart';
+import 'package:compramejor/models/models.dart';
+import 'package:compramejor/services/catalog_repository.dart';
 
 void main() {
   group('formatCents', () {

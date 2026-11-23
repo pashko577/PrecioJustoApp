@@ -1,6 +1,6 @@
-# PRECIO JUSTO — Análisis de la v1.0 y decisión de arquitectura
+# CompraMejor — Análisis de la v1.0 y decisión de arquitectura
 
-> Complemento de [PRECIO_JUSTO.md](PRECIO_JUSTO.md) (v1.1). El documento original está en [docs/historial/PRECIO_JUSTO_v1.0_original.md](docs/historial/PRECIO_JUSTO_v1.0_original.md).
+> Complemento de [COMPRA_MEJOR.md](COMPRA_MEJOR.md) (v1.1). El documento original está en [docs/historial/PRECIO_JUSTO_v1.0_original.md](docs/historial/PRECIO_JUSTO_v1.0_original.md).
 
 ---
 

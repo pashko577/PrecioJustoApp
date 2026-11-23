@@ -1,11 +1,11 @@
-"""Configuración de Scrapy para PRECIO JUSTO (extracción responsable, sección 7.7)."""
+"""Configuración de Scrapy para CompraMejor (extracción responsable, sección 7.7)."""
 
-BOT_NAME = "precio_justo"
+BOT_NAME = "compramejor"
 SPIDER_MODULES = ["app.spiders"]
 NEWSPIDER_MODULE = "app.spiders"
 
 # Identificación propia del cliente. Actualizar con la URL pública del proyecto cuando exista.
-USER_AGENT = "PrecioJustoBot/0.1"
+USER_AGENT = "CompraMejorBot/0.1"
 
 ROBOTSTXT_OBEY = True
 CONCURRENT_REQUESTS_PER_DOMAIN = 1

@@ -1,9 +1,9 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/features/auth/auth_errors.dart';
-import 'package:precio_justo/features/auth/auth_repository.dart';
-import 'package:precio_justo/models/user_profile.dart';
+import 'package:compramejor/features/auth/auth_errors.dart';
+import 'package:compramejor/features/auth/auth_repository.dart';
+import 'package:compramejor/models/user_profile.dart';
 
 void main() {
   late FakeFirebaseFirestore db;

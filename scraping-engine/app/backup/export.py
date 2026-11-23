@@ -80,7 +80,7 @@ def export(db, folder: Path, include_users: bool) -> dict:
     folder.mkdir(parents=True, exist_ok=True)
     names = CATALOG_COLLECTIONS + (USER_COLLECTIONS if include_users else [])
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = folder / f"precio-justo-{stamp}.jsonl.gz"
+    path = folder / f"compramejor-{stamp}.jsonl.gz"
     counter: dict[str, int] = {}
     with gzip.open(path, "wt", encoding="utf-8") as out:
         for name in names:

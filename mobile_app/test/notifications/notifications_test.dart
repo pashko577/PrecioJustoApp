@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:precio_justo/features/notifications/notifications.dart';
-import 'package:precio_justo/services/push_service.dart';
+import 'package:compramejor/features/notifications/notifications.dart';
+import 'package:compramejor/services/push_service.dart';
 
 Future<FakeFirebaseFirestore> seed() async {
   final db = FakeFirebaseFirestore();

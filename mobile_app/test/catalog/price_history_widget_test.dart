@@ -2,10 +2,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/core/price_history.dart';
-import 'package:precio_justo/features/history/price_history_section.dart';
-import 'package:precio_justo/models/models.dart';
-import 'package:precio_justo/services/catalog_repository.dart';
+import 'package:compramejor/core/price_history.dart';
+import 'package:compramejor/features/history/price_history_section.dart';
+import 'package:compramejor/models/models.dart';
+import 'package:compramejor/services/catalog_repository.dart';
 
 final now = DateTime.now().toUtc();
 

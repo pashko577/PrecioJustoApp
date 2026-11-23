@@ -6,8 +6,8 @@ import '../services/push_service.dart';
 import 'router.dart';
 import 'theme.dart';
 
-class PrecioJustoApp extends ConsumerWidget {
-  const PrecioJustoApp({super.key});
+class CompraMejorApp extends ConsumerWidget {
+  const CompraMejorApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

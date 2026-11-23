@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/app/router.dart';
-import 'package:precio_justo/features/auth/auth_errors.dart';
-import 'package:precio_justo/features/auth/validators.dart';
+import 'package:compramejor/app/router.dart';
+import 'package:compramejor/features/auth/auth_errors.dart';
+import 'package:compramejor/features/auth/validators.dart';
 
 void main() {
   group('Validators', () {

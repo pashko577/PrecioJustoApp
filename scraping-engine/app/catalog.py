@@ -1,4 +1,4 @@
-"""Reglas del catálogo normalizado: categorías y documentos de producto (PRECIO_JUSTO.md, 9.3)."""
+"""Reglas del catálogo normalizado: categorías y documentos de producto (COMPRA_MEJOR.md, 9.3)."""
 
 from __future__ import annotations
 

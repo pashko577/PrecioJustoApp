@@ -1,4 +1,4 @@
-"""Contrato de datos común a todos los extractores (PRECIO_JUSTO.md, sección 7.2)."""
+"""Contrato de datos común a todos los extractores (COMPRA_MEJOR.md, sección 7.2)."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class ScrapedOffer:
     seller: str | None = None
     shipping_cents: int | None = None  # None = envío desconocido (RN-03), no gratis
     # Precio "normal" que publica la tienda (tachado). NO es un precio anterior observado por
-    # PRECIO JUSTO (RF-04), por eso se guarda aparte y no se muestra como "antes".
+    # CompraMejor (RF-04), por eso se guarda aparte y no se muestra como "antes".
     list_price_cents: int | None = None
     identifiers: dict[str, str] = field(default_factory=dict)  # {"GTIN": canónico, "MPN": ...}
     category_hint: str | None = None  # slug de nuestra categoría según la tienda

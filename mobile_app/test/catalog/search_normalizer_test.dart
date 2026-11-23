@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/core/search_normalizer.dart';
+import 'package:compramejor/core/search_normalizer.dart';
 
 void main() {
   // `flutter test` se ejecuta desde mobile_app/; el archivo compartido está en la raíz del repo.

@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// PRECIO JUSTO - Reglas de seguridad de Firestore (ver PRECIO_JUSTO.md, sección 11)
+// CompraMejor - Reglas de seguridad de Firestore (ver COMPRA_MEJOR.md, sección 11)
 // El motor de scraping usa el Admin SDK y NO pasa por estas reglas.
 service cloud.firestore {
   match /databases/{database}/documents {

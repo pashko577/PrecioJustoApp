@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/features/catalog/product_row.dart';
-import 'package:precio_justo/models/models.dart';
-import 'package:precio_justo/services/catalog_repository.dart';
+import 'package:compramejor/features/catalog/product_row.dart';
+import 'package:compramejor/models/models.dart';
+import 'package:compramejor/services/catalog_repository.dart';
 
 Product product({int? price, Duration? age, int offers = 1}) => Product(
       id: 'p',

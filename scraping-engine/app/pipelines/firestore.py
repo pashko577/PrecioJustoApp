@@ -1,4 +1,4 @@
-"""Guarda ofertas en Firestore (PRECIO_JUSTO.md, secciones 9.3 y 11.3).
+"""Guarda ofertas en Firestore (COMPRA_MEJOR.md, secciones 9.3 y 11.3).
 
 Por cada oferta:
 - `storeProducts/{storeCode}__{externalId}`: estado actual de la publicación + asociación al producto.

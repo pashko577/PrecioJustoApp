@@ -1,4 +1,4 @@
-# PRECIO JUSTO
+# CompraMejor
 
 ## Documentación funcional y técnica
 
@@ -51,13 +51,13 @@
 
 ### 1.1. Descripción
 
-PRECIO JUSTO es una aplicación móvil que permite a los consumidores buscar productos y comparar sus precios entre distintas tiendas virtuales del mercado peruano.
+CompraMejor es una aplicación móvil que permite a los consumidores buscar productos y comparar sus precios entre distintas tiendas virtuales del mercado peruano.
 
 Su finalidad es ayudar a las personas a tomar mejores decisiones de compra mediante información organizada sobre precios, características, disponibilidad, evolución histórica y enlaces hacia las tiendas donde se comercializan los productos.
 
 La aplicación contará con un motor de extracción automatizada de información mediante web scraping, encargado de consultar las páginas de comercio electrónico, obtener los datos disponibles y procesarlos para presentarlos de manera uniforme.
 
-PRECIO JUSTO será un producto independiente, con sus propios usuarios, base de datos, infraestructura, identidad comercial y modelo de negocio.
+CompraMejor será un producto independiente, con sus propios usuarios, base de datos, infraestructura, identidad comercial y modelo de negocio.
 
 ### 1.2. Problema que busca resolver
 
@@ -247,7 +247,7 @@ El sistema conservará las observaciones históricas de cada oferta. Permitirá 
 - Fecha de cada observación.
 - Variaciones porcentuales.
 
-El historial representará observaciones recopiladas por PRECIO JUSTO, no necesariamente todos los precios que existieron en el mercado.
+El historial representará observaciones recopiladas por CompraMejor, no necesariamente todos los precios que existieron en el mercado.
 
 ### RF-06. Alertas de precios
 
@@ -997,7 +997,7 @@ Convenciones: montos en **céntimos (entero)** con sufijo `Cents`; fechas como `
 | matchStatus | string | `MATCHED_AUTO` \| `MATCHED_MANUAL` \| `PENDING_REVIEW` \| `UNMATCHED` \| `REJECTED` |
 | matchScore | int \| null | 0–100 |
 | currentPriceCents | int | |
-| previousPriceCents | int \| null | Solo si fue observado por PRECIO JUSTO |
+| previousPriceCents | int \| null | Solo si fue observado por CompraMejor |
 | currentShippingCents | int \| null | `null` = desconocido |
 | listPriceCents | int \| null | Precio "normal" que publica la tienda (tachado). **No** es un precio anterior observado (RF-04): no se muestra como "antes" |
 | identifiers | map | `{ GTIN: canónico, MPN: código del fabricante }` |
@@ -1095,7 +1095,7 @@ Firestore indexa cada campo automáticamente. Índices compuestos necesarios (en
 | RN-07 | Historial | Se agrega un punto de historial cuando cambia precio, disponibilidad o envío. Cada verificación sin cambios actualiza `lastCheckedAt`. |
 | RN-08 | Alertas | Una alerta se activa solo con una oferta vigente y disponible cuyo precio cumpla la condición. No se repite si el precio es igual o mayor a `lastTriggeredPriceCents`; vuelve a dispararse si baja más o si el precio sube por encima del objetivo y luego vuelve a cumplirlo. **Implementación:** la alerta sigue `ACTIVE` después de avisar (si pasara a `TRIGGERED` el motor dejaría de vigilarla); el motor evalúa al cerrar cada corrida las alertas de los productos que cambiaron y las nunca evaluadas (`evaluatedAt == null`), y nunca avisa con un precio vencido. |
 | RN-09 | Información desactualizada | Las ofertas fuera del periodo de vigencia se muestran como "desactualizadas" y no cuentan para el precio más bajo. Si una publicación no aparece en 3 corridas seguidas, pasa a `status: GONE`. |
-| RN-10 | Publicaciones comerciales | El enlace dirige a la publicación de la tienda. PRECIO JUSTO no procesa pagos ni es responsable de la transacción en su primera versión. |
+| RN-10 | Publicaciones comerciales | El enlace dirige a la publicación de la tienda. CompraMejor no procesa pagos ni es responsable de la transacción en su primera versión. |
 | RN-11 | Límites del plan gratuito de usuario | Favoritos, alertas y listas se limitan según `config/app.freePlanLimits` (por defecto 50, 5 y 3; 100 productos por lista). En el MVP el límite se valida en la app con un conteo agregado (1 lectura); el motor ignora alertas que excedan el límite. Premium no tiene el límite gratuito. |
 
 ---
@@ -1404,7 +1404,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 
 ### 17.1. Objetivo
 
-Establecer la estructura inicial de PRECIO JUSTO, preparar el entorno de desarrollo y lograr que la app móvil lea datos de Firestore (primero en el emulador y luego en el proyecto real). También se preparará el motor de scraping con una prueba controlada sobre HTML local.
+Establecer la estructura inicial de CompraMejor, preparar el entorno de desarrollo y lograr que la app móvil lea datos de Firestore (primero en el emulador y luego en el proyecto real). También se preparará el motor de scraping con una prueba controlada sobre HTML local.
 
 **Duración propuesta:** 2 semanas. **Costo:** S/ 0.
 
@@ -1543,7 +1543,7 @@ Establecer la estructura inicial de PRECIO JUSTO, preparar el entorno de desarro
 
 ## 20. Decisiones técnicas que deben mantenerse
 
-1. PRECIO JUSTO es independiente de FINANCIO.
+1. CompraMejor es independiente de FINANCIO.
 2. El mercado inicial es Perú.
 3. La cobertura funcional contempla múltiples categorías; el MVP empieza con Tecnología.
 4. La extracción de información se realizará principalmente mediante scraping.
@@ -1591,7 +1591,7 @@ Estas capacidades no forman parte del MVP y deberán desarrollarse cuando exista
 
 ## Conclusión
 
-PRECIO JUSTO busca convertirse en una plataforma de referencia para comparar precios en el mercado peruano.
+CompraMejor busca convertirse en una plataforma de referencia para comparar precios en el mercado peruano.
 
 Su principal ventaja competitiva no será únicamente extraer precios, sino identificar correctamente los productos, mantener información histórica confiable y presentar comparaciones útiles para el consumidor.
 

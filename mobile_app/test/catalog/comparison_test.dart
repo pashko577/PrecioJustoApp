@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/core/offer_rules.dart';
-import 'package:precio_justo/features/catalog/product_screen.dart';
-import 'package:precio_justo/features/offers/offer_tile.dart';
-import 'package:precio_justo/models/models.dart';
+import 'package:compramejor/core/offer_rules.dart';
+import 'package:compramejor/features/catalog/product_screen.dart';
+import 'package:compramejor/features/offers/offer_tile.dart';
+import 'package:compramejor/models/models.dart';
 
 final now = DateTime.utc(2026, 11, 23, 12);
 

@@ -81,7 +81,7 @@ class HistoryStats {
   final DateTime from;
   final DateTime to;
 
-  /// Primera observación de PRECIO JUSTO para este producto (el historial empieza ahí).
+  /// Primera observación de CompraMejor para este producto (el historial empieza ahí).
   final DateTime? firstObservation;
   final int? currentCents;
   final int? minCents;

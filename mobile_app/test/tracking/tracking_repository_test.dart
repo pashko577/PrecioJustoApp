@@ -1,8 +1,8 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/features/tracking/tracking_screens.dart';
-import 'package:precio_justo/models/tracking.dart';
-import 'package:precio_justo/services/tracking_repository.dart';
+import 'package:compramejor/features/tracking/tracking_screens.dart';
+import 'package:compramejor/models/tracking.dart';
+import 'package:compramejor/services/tracking_repository.dart';
 
 void main() {
   late FakeFirebaseFirestore db;

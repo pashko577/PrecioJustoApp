@@ -1,8 +1,8 @@
-# PRECIO JUSTO
+# CompraMejor
 
 Comparador de precios para el mercado peruano. App en **Flutter**, datos en **Firebase (plan gratuito Spark)** y scraping en **Python** ejecutado con **GitHub Actions**. Costo de desarrollo: **S/ 0**.
 
-- Documento del producto: [PRECIO_JUSTO.md](PRECIO_JUSTO.md)
+- Documento del producto: [COMPRA_MEJOR.md](COMPRA_MEJOR.md)
 - Análisis y decisión de arquitectura: [ANALISIS_Y_PROPUESTA_FIREBASE.md](ANALISIS_Y_PROPUESTA_FIREBASE.md)
 
 ## Estructura

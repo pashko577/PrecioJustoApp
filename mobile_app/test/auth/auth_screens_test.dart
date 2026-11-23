@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:precio_justo/features/auth/auth_errors.dart';
-import 'package:precio_justo/features/auth/auth_providers.dart';
-import 'package:precio_justo/features/auth/auth_repository.dart';
-import 'package:precio_justo/features/auth/forgot_password_screen.dart';
-import 'package:precio_justo/features/auth/login_screen.dart';
-import 'package:precio_justo/features/auth/register_screen.dart';
-import 'package:precio_justo/models/user_profile.dart';
+import 'package:compramejor/features/auth/auth_errors.dart';
+import 'package:compramejor/features/auth/auth_providers.dart';
+import 'package:compramejor/features/auth/auth_repository.dart';
+import 'package:compramejor/features/auth/forgot_password_screen.dart';
+import 'package:compramejor/features/auth/login_screen.dart';
+import 'package:compramejor/features/auth/register_screen.dart';
+import 'package:compramejor/models/user_profile.dart';
 
 /// Implementación falsa para probar las pantallas sin Firebase.
 class FakeAuthRepository implements AuthRepository {

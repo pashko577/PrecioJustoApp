@@ -3,8 +3,8 @@
 Usa el catálogo público de VTEX (`/api/catalog_system/pub/products/search`), que devuelve datos
 estructurados (JSON). Es más estable que leer el HTML y genera muchas menos solicitudes.
 
-Reglas de extracción responsable (PRECIO_JUSTO.md, 7.7):
-- Respeta robots.txt (ROBOTSTXT_OBEY) y se identifica como PrecioJustoBot.
+Reglas de extracción responsable (COMPRA_MEJOR.md, 7.7):
+- Respeta robots.txt (ROBOTSTXT_OBEY) y se identifica como CompraMejorBot.
 - Una solicitud a la vez, con pausa entre solicitudes.
 - Ante HTTP 429 (demasiadas solicitudes) o 403 se DETIENE; no reintenta ni evade.
 """

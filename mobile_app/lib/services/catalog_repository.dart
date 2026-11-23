@@ -15,7 +15,7 @@ class ProductPage {
   final bool hasMore;
 }
 
-/// Acceso de solo lectura al catálogo público (PRECIO_JUSTO.md, sección 11.1).
+/// Acceso de solo lectura al catálogo público (COMPRA_MEJOR.md, sección 11.1).
 /// Todas las consultas usan `limit` y lecturas puntuales (`get`) para cuidar la cuota gratuita.
 class CatalogRepository {
   CatalogRepository(this._db);

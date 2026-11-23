@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/core/money.dart';
-import 'package:precio_justo/models/tracking.dart';
+import 'package:compramejor/core/money.dart';
+import 'package:compramejor/models/tracking.dart';
 
 void main() {
   test('parseSolesToCents', () {

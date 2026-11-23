@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/core/price_history.dart';
-import 'package:precio_justo/models/models.dart';
+import 'package:compramejor/core/price_history.dart';
+import 'package:compramejor/models/models.dart';
 
 final now = DateTime.utc(2026, 11, 30, 12);
 

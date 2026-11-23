@@ -2,9 +2,9 @@ import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:precio_justo/features/catalog/search_screen.dart';
-import 'package:precio_justo/models/models.dart';
-import 'package:precio_justo/services/catalog_repository.dart';
+import 'package:compramejor/features/catalog/search_screen.dart';
+import 'package:compramejor/models/models.dart';
+import 'package:compramejor/services/catalog_repository.dart';
 
 const noPrice = 9999999999; // NO_PRICE_SORT_VALUE en Python
 

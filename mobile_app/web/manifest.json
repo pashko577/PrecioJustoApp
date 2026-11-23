@@ -1,11 +1,11 @@
 {
-    "name": "precio_justo",
-    "short_name": "precio_justo",
+    "name": "CompraMejor",
+    "short_name": "CompraMejor",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "PRECIO JUSTO - comparador de precios",
+    "description": "CompraMejor - comparador de precios",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

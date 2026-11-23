@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:precio_justo/features/tracking/tracking_actions.dart';
-import 'package:precio_justo/features/tracking/tracking_screens.dart';
-import 'package:precio_justo/models/models.dart';
-import 'package:precio_justo/services/catalog_repository.dart';
-import 'package:precio_justo/services/tracking_repository.dart';
+import 'package:compramejor/features/tracking/tracking_actions.dart';
+import 'package:compramejor/features/tracking/tracking_screens.dart';
+import 'package:compramejor/models/models.dart';
+import 'package:compramejor/services/catalog_repository.dart';
+import 'package:compramejor/services/tracking_repository.dart';
 
 const product = Product(id: 'p1', name: 'Kingston NV3 1TB', brand: 'Kingston', categorySlug: 'ssd');
 
