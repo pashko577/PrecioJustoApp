@@ -37,7 +37,7 @@ jobs:
         working-directory: scraping-engine
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -51,12 +51,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: firebase-tests/package-lock.json
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
