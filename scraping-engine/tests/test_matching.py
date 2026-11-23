@@ -153,10 +153,12 @@ def test_different_refresh_rate_is_blocked():
 
 def test_enabled_spiders_and_registry_agree():
     from app.admin.stores import enabled_spiders
-    from app.spiders.vtex.registry import SPIDERS
+    from app.spiders.magento.registry import SPIDERS as MAGENTO
+    from app.spiders.vtex.registry import SPIDERS as VTEX
     enabled = enabled_spiders()
-    assert "coolbox" in enabled
-    assert set(enabled) <= set(SPIDERS) | {"demo_store"}
+    assert {"coolbox", "efe", "lacuracao"} <= set(enabled)
+    # Toda tienda activa debe tener un extractor generado (VTEX o Magento).
+    assert set(enabled) <= set(VTEX) | set(MAGENTO)
 
 
 def test_store_with_unknown_category_rejected(tmp_path):
@@ -199,3 +201,15 @@ def test_needs_write_only_on_material_changes():
     assert needs_write(base, base | {"title": "Y"})
     assert needs_write(base | {"missedRuns": 1}, base)       # reapareció: reiniciar missedRuns
     assert needs_write(base | {"status": "GONE"}, base)
+
+
+
+def test_shared_model_code_counts_as_model_match():
+    from app.matching.scoring import model_codes
+    # Producto creado desde Plaza Vea con "modelo" = código interno; título de Efe con el modelo real.
+    intercorp = Candidate(product_id="lg", name="Refrigeradora LG 509L No Frost LS51BPP Plateado", brand="LG",
+                          model="20329474")
+    efe = Listing(title="Refrigeradora LG Side By Side 509LT LS51BPP Plateada", brand="LG")
+    assert "ls51bpp" in model_codes(set(efe.words))
+    assert score(efe, intercorp) >= 75
+    assert "1tb" not in model_codes({"1tb", "180hz", "pcie4.0"})

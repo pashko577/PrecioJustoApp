@@ -47,6 +47,7 @@ class ProductMatcher:
         # Productos creados a partir de una publicación: "{storeCode}__{externalId}" -> product_id
         self._owned_by: dict[str, str] = {}
         self.renamed_products = 0
+        self.enriched_products = 0
         self.created_products = 0
 
     def _load_category(self, slug: str) -> dict[str, Candidate]:
@@ -102,6 +103,37 @@ class ProductMatcher:
                     return MatchDecision(pid, "MATCHED_AUTO", 100, "producto nuevo creado desde identificador")
             return decision
         return MatchDecision(None, "UNMATCHED", None, "sin categoría reconocida")
+
+    def enrich_product_keys(self, offer: ScrapedOffer, product_id: str | None) -> str | None:
+        """Agrega al producto asociado los identificadores de la oferta que todavía no tiene.
+
+        Así, un producto creado con el código interno de una tienda también coincide después
+        con el código de fabricante que publica otra. Si ese código ya pertenece a OTRO producto
+        no se fusiona nada (RN-06): devuelve ese producto para marcarlo como posible duplicado.
+        """
+        if not product_id:
+            return None
+        keys = []
+        if gtin := offer.identifiers.get("GTIN"):
+            keys.append(f"GTIN:{gtin}")
+        if mpn := offer.identifiers.get("MPN"):
+            keys.append(f"MPN:{mpn}")
+        new_keys = []
+        for key in keys:
+            owner = self._find_by_key(key)
+            if owner is None:
+                new_keys.append(key)
+            elif owner != product_id:
+                return owner  # mismo código en dos productos: revisión manual
+        if new_keys:
+            self.db.collection("products").document(product_id).update({
+                "identifierKeys": firestore.ArrayUnion(new_keys),
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+            })
+            for key in new_keys:
+                self._by_key[key] = product_id
+            self.enriched_products += 1
+        return None
 
     def refresh_owned_name(self, offer: ScrapedOffer, product_id: str | None) -> bool:
         """Si el producto se creó desde ESTA publicación y su título cambió, actualiza el nombre.

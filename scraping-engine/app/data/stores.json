@@ -154,5 +154,172 @@
       "notes": "PENDIENTE: no se pudieron leer los términos (la página no carga en navegador sin interfaz). Supermercado con poca oferta en las categorías actuales. No se activa sin evaluación. Búsquedas de prueba: pocas laptops, sin monitores, SSD ni taladros; sí refrigeradoras, lavadoras y microondas (ids /1000003/1000127/1000020/, /1000003/1000128/1000021/, /1000003/1000126/1000024/)."
     },
     "vtexCategories": {}
+  },
+  {
+    "code": "EFE",
+    "name": "Efe",
+    "baseUrl": "https://www.efe.com.pe",
+    "platform": "MAGENTO",
+    "spider": "efe",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite listados de categoría (.html y ?p=N). Bloquea /catalogsearch/, /search/, /catalog/, /checkout/, /customer/ y los parámetros product_list_*. La API /graphql no responde (no se usa).",
+      "terms": "Términos y condiciones de Conecta Retail S.A. (Efe y La Curacao comparten documento). Regulan compras, garantías, promociones, sorteos y datos personales. Sin cláusulas sobre acceso automatizado, extracción, reproducción de contenidos ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: listados de categoría, 1 solicitud a la vez, pausa de 6 s, sin parámetros bloqueados, detenerse ante 403/429/503 o desafío de Cloudflare (no se evade), cada 12 h. No mostrar fotos. Requiere revisión legal antes del lanzamiento comercial (13.3).",
+      "notes": "Monitores y microondas no aparecen en el menú; no se adivinan rutas."
+    },
+    "categoryPaths": {
+      "/tecnologia/computacion/laptops.html": "laptops",
+      "/tecnologia/gaming/laptops-gamer.html": "laptops",
+      "/tecnologia/celulares/celulares-y-smartphones.html": "celulares",
+      "/electrohogar/refrigeracion/refrigeradoras.html": "refrigeradoras",
+      "/electrohogar/lavado/lavadoras.html": "lavadoras"
+    }
+  },
+  {
+    "code": "LACURACAO",
+    "name": "La Curacao",
+    "baseUrl": "https://www.lacuracao.pe",
+    "platform": "MAGENTO",
+    "spider": "lacuracao",
+    "scrapingEnabled": true,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite listados de categoría (.html y ?p=N). Bloquea /catalogsearch/, /search/, /catalog/, /checkout/, /customer/ y los parámetros product_list_*. La API /graphql no responde (no se usa).",
+      "terms": "Términos y condiciones de Conecta Retail S.A. (Efe y La Curacao comparten documento). Regulan compras, garantías, promociones, sorteos y datos personales. Sin cláusulas sobre acceso automatizado, extracción, reproducción de contenidos ni propiedad intelectual.",
+      "conclusion": "Viable con extracción responsable: listados de categoría, 1 solicitud a la vez, pausa de 6 s, sin parámetros bloqueados, detenerse ante 403/429/503 o desafío de Cloudflare (no se evade), cada 12 h. No mostrar fotos. Requiere revisión legal antes del lanzamiento comercial (13.3).",
+      "notes": "Monitores y microondas no aparecen en el menú; no se adivinan rutas."
+    },
+    "categoryPaths": {
+      "/tecnologia/computacion/laptops.html": "laptops",
+      "/tecnologia/gaming/laptops-gamer.html": "laptops",
+      "/tecnologia/celulares/celulares-y-smartphones.html": "celulares",
+      "/electrohogar/refrigeracion/refrigeradoras.html": "refrigeradoras",
+      "/electrohogar/lavado/lavadoras.html": "lavadoras"
+    }
+  },
+  {
+    "code": "SERCOPLUS",
+    "name": "SercoPlus",
+    "baseUrl": "https://www.sercoplus.com",
+    "platform": "PRESTASHOP",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos (solo bloquea bots de IA por nombre).",
+      "terms": "Términos de uso de Corporación SercoPlus S.A.C.: regulan compras, validación de pagos y garantías. Sin cláusulas sobre extracción ni propiedad intelectual.",
+      "conclusion": "Viable; falta construir su extractor.",
+      "notes": "PrestaShop detrás de Cloudflare."
+    }
+  },
+  {
+    "code": "IMPACTO",
+    "name": "Impacto",
+    "baseUrl": "https://www.impacto.com.pe",
+    "platform": "NEXTJS",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos (solo bloquea bots de IA por nombre).",
+      "terms": "Términos de Importaciones Impacto S.A.C. (/terminos, no enlazados en la portada): tratan datos personales. Sin cláusulas sobre extracción ni propiedad intelectual.",
+      "conclusion": "Viable; falta construir su extractor.",
+      "notes": "Next.js detrás de Cloudflare."
+    }
+  },
+  {
+    "code": "MEMORYKINGS",
+    "name": "Memory Kings",
+    "baseUrl": "https://www.memorykings.pe",
+    "platform": "CUSTOM",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos (solo bloquea bots de IA por nombre).",
+      "terms": "No publica términos de uso (no hay enlace en la portada ni en el sitemap). Nada lo prohíbe.",
+      "conclusion": "Viable; falta construir su extractor.",
+      "notes": "Sitio propio (Apache). Revisar si publica términos antes de activar."
+    }
+  },
+  {
+    "code": "FALABELLA",
+    "name": "Falabella",
+    "baseUrl": "https://www.falabella.com.pe",
+    "platform": "OTHER",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos.",
+      "terms": "Términos y condiciones de acceso y uso del sitio (Falabella.com SpA): 'Todos los contenidos [...] compilaciones de datos [...] son propiedad de Falabella.com SpA' y 'Ningún producto, imagen o sonido pueden ser reproducidos, duplicados, copiados, vendidos, revendidos, visitados o explotados para ningún fin [...] sin el consentimiento escrito previo de Falabella.com SpA'.",
+      "conclusion": "NO VIABLE sin autorización escrita de la empresa.",
+      "notes": "Alternativa: programa de afiliados o permiso escrito."
+    }
+  },
+  {
+    "code": "SODIMAC",
+    "name": "Sodimac",
+    "baseUrl": "https://www.sodimac.com.pe",
+    "platform": "OTHER",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos.",
+      "terms": "Mismos términos del grupo Falabella: contenidos y compilaciones de datos son propiedad de Sodimac; prohibida su reproducción o explotación sin consentimiento escrito previo.",
+      "conclusion": "NO VIABLE sin autorización escrita de la empresa.",
+      "notes": "Alternativa: programa de afiliados o permiso escrito."
+    }
+  },
+  {
+    "code": "HIRAOKA",
+    "name": "Hiraoka",
+    "baseUrl": "https://hiraoka.com.pe",
+    "platform": "OTHER",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos.",
+      "terms": "Términos de Importaciones Hiraoka S.A.C.: 'queda expresamente prohibido al Usuario la reproducción, transformación, distribución, comunicación pública, puesta a disposición, extracción y/o reutilización del Sitio Web, sus contenidos [...]'.",
+      "conclusion": "NO VIABLE sin autorización escrita de la empresa.",
+      "notes": "Alternativa: permiso escrito."
+    }
+  },
+  {
+    "code": "TOTTUS",
+    "name": "Tottus",
+    "baseUrl": "https://www.tottus.com.pe",
+    "platform": "OTHER",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 720,
+    "freshnessMinutes": 1440,
+    "review": {
+      "reviewedAt": "2026-11-23",
+      "robotsTxt": "Permite bots genéricos (solo bloquea bots de IA por nombre).",
+      "terms": "Términos de Hipermercados Tottus S.A.: regulan compras. Sin cláusulas de propiedad intelectual, reproducción ni extracción.",
+      "conclusion": "Viable; falta construir su extractor.",
+      "notes": "Supermercado: poca oferta en las categorías actuales; baja prioridad."
+    }
   }
 ]

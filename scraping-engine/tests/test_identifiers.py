@@ -26,3 +26,10 @@ def test_invalid_gtin(raw):
 def test_check_digit():
     assert gtin_check_digit_ok("4006381333931")
     assert not gtin_check_digit_ok("4006381333932")
+
+
+def test_canonical_mpn_unifies_spacing():
+    from app.normalizers.identifiers import canonical_mpn
+    assert canonical_mpn("RX 280 PLUS") == canonical_mpn("rx-280-plus") == canonical_mpn("RX280PLUS") == "RX280PLUS"
+    assert canonical_mpn("SNV3S/1000G") == "SNV3S/1000G"
+    assert canonical_mpn("  ") is None and canonical_mpn(None) is None

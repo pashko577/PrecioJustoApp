@@ -32,3 +32,15 @@ def canonical_gtin(raw: str | None) -> str | None:
     if len(code) == 14:
         return code[1:] if code.startswith("0") else code
     return code.zfill(13)
+
+
+def canonical_mpn(raw: str | None) -> str | None:
+    """Código del fabricante normalizado: mayúsculas, sin espacios ni guiones.
+
+    "RX 280 PLUS", "rx-280-plus" y "RX280PLUS" son el mismo modelo. Se usa igual al guardar
+    productos (`catalog.identifier_keys`) y al leer ofertas (todos los extractores).
+    """
+    if not raw:
+        return None
+    value = re.sub(r"[\s-]", "", str(raw)).upper()
+    return value or None

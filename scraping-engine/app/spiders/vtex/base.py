@@ -21,7 +21,7 @@ import scrapy
 from scrapy.exceptions import CloseSpider
 
 from app.models.offer import ScrapedOffer
-from app.normalizers.identifiers import canonical_gtin
+from app.normalizers.identifiers import canonical_gtin, canonical_mpn
 from app.normalizers.price import number_to_cents
 from app.normalizers.text import normalize_text, word_tokens
 from app.pipelines.job_errors import record_error
@@ -82,6 +82,32 @@ def clean_title(product_name: str | None, item_name: str | None, name_complete: 
     return f"{product} - {' '.join(extra)}" if extra else product
 
 
+_MODEL_CODE_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9][A-Za-z0-9 ./_-]{2,30}$")
+
+
+def looks_like_model_code(value: str | None) -> bool:
+    """¿Parece un código de modelo (letras y números) y no un correlativo interno solo numérico?"""
+    return bool(value) and bool(_MODEL_CODE_RE.match(value.strip())) and len(value.split()) <= 3
+
+
+def pick_mpn(product: dict) -> str | None:
+    """Código del fabricante de un producto VTEX.
+
+    - Coolbox: `productReference` es el modelo real ("SA400S37960GB").
+    - Plaza Vea, Oechsle, Promart: `productReference` es un correlativo interno ("20329474") y el
+      modelo real está en la especificación "Modelo" ("RI-795DI").
+    """
+    reference = (product.get("productReference") or "").strip()
+    if looks_like_model_code(reference):
+        return reference
+    for key in ("Modelo", "Model", "Código de modelo", "Número de modelo"):
+        values = product.get(key)
+        value = (values[0] if isinstance(values, list) and values else values) or ""
+        if isinstance(value, str) and looks_like_model_code(value.strip()):
+            return value.strip()
+    return None
+
+
 def _default_seller(item: dict) -> dict | None:
     sellers = item.get("sellers") or []
     return next((s for s in sellers if s.get("sellerDefault")), sellers[0] if sellers else None)
@@ -97,7 +123,7 @@ def offers_from_product(product: dict, *, store_code: str, category_slug: str | 
     offers: list[ScrapedOffer] = []
     warnings: list[str] = []
     categories_text = " ".join(product.get("categories") or [])
-    mpn = (product.get("productReference") or "").strip() or None
+    mpn = pick_mpn(product)
 
     for item in product.get("items") or []:
         sku = str(item.get("itemId") or "").strip()
@@ -121,7 +147,7 @@ def offers_from_product(product: dict, *, store_code: str, category_slug: str | 
         if gtin := canonical_gtin(item.get("ean")):
             identifiers["GTIN"] = gtin
         if mpn:
-            identifiers["MPN"] = mpn.upper()
+            identifiers["MPN"] = canonical_mpn(mpn)
 
         images = item.get("images") or []
         offers.append(ScrapedOffer(

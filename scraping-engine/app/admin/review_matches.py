@@ -7,6 +7,8 @@ Uso (emulador por defecto; producción con --prod --yes):
     python -m app.admin.review_matches assign COOLBOX__123 producto-x  # asocia a otro producto
     python -m app.admin.review_matches reject COOLBOX__123           # no corresponde a ninguno
     python -m app.admin.review_matches create COOLBOX__123           # crea un producto nuevo
+    python -m app.admin.review_matches duplicates                    # posibles duplicados detectados
+    python -m app.admin.review_matches merge producto-a producto-b   # unifica b en a
 
 Las decisiones manuales (MATCHED_MANUAL, REJECTED) se respetan en las corridas siguientes.
 Cada acción recalcula los precios de los productos afectados y queda en auditLogs.
@@ -116,6 +118,69 @@ def create(db, listing_id: str) -> str:
     return product_id
 
 
+def list_duplicates(db, limit: int = 50) -> list[dict]:
+    """Publicaciones marcadas por el motor: su código pertenece a otro producto (posible duplicado)."""
+    query = db.collection("storeProducts").where(filter=FieldFilter("possibleDuplicateOf", "!=", None)).limit(limit)
+    return [{"id": s.id, **(s.to_dict() or {})} for s in query.stream()]
+
+
+def merge(db, keep_id: str, remove_id: str) -> dict:
+    """Unifica el producto `remove_id` dentro de `keep_id`.
+
+    - Todas las publicaciones de `remove_id` pasan a `keep_id` (MATCHED_MANUAL).
+    - Se unen los identificadores (GTIN/MPN) y las palabras de búsqueda.
+    - Favoritos y alertas de los usuarios se migran: nadie pierde su seguimiento.
+    - `remove_id` queda con status MERGED y `mergedInto` (la app redirige al producto conservado).
+    """
+    if keep_id == remove_id:
+        raise ReviewError("Los dos productos son el mismo.")
+    keep_ref, remove_ref = db.collection("products").document(keep_id), db.collection("products").document(remove_id)
+    keep_snap, remove_snap = keep_ref.get(), remove_ref.get()
+    if not keep_snap.exists or not remove_snap.exists:
+        raise ReviewError("Alguno de los productos no existe.")
+    keep, remove = keep_snap.to_dict() or {}, remove_snap.to_dict() or {}
+    if remove.get("status") == "MERGED":
+        raise ReviewError(f"{remove_id} ya fue unificado en {remove.get('mergedInto')}.")
+    if keep.get("categorySlug") != remove.get("categorySlug"):
+        raise ReviewError("Los productos están en categorías distintas: revisa que sean el mismo artículo.")
+
+    moved = 0
+    batch = db.batch()
+    for snap in db.collection("storeProducts").where(filter=FieldFilter("productId", "==", remove_id)).stream():
+        batch.update(snap.reference, {"productId": keep_id, "matchStatus": "MATCHED_MANUAL", "possibleDuplicateOf": None,
+                                      "matchReason": f"unificado desde {remove_id}", "updatedAt": firestore.SERVER_TIMESTAMP})
+        moved += 1
+    for snap in db.collection("storeProducts").where(filter=FieldFilter("possibleDuplicateOf", "==", remove_id)).stream():
+        batch.update(snap.reference, {"possibleDuplicateOf": None})
+    batch.update(keep_ref, {
+        "identifierKeys": firestore.ArrayUnion(remove.get("identifierKeys") or []),
+        "searchTokens": firestore.ArrayUnion(remove.get("searchTokens") or []),
+        "updatedAt": firestore.SERVER_TIMESTAMP,
+    })
+    batch.update(remove_ref, {"status": "MERGED", "mergedInto": keep_id, "updatedAt": firestore.SERVER_TIMESTAMP})
+    batch.commit()
+
+    migrated = {"favorites": 0, "alerts": 0, "wishlists": 0}
+    for snap in db.collection_group("favorites").where(filter=FieldFilter("productId", "==", remove_id)).stream():
+        user = snap.reference.parent
+        if not user.document(keep_id).get().exists:
+            user.document(keep_id).set({**(snap.to_dict() or {}), "productId": keep_id,
+                                        "productName": keep.get("displayName", "")})
+        snap.reference.delete()
+        migrated["favorites"] += 1
+    for snap in db.collection_group("alerts").where(filter=FieldFilter("productId", "==", remove_id)).stream():
+        snap.reference.update({"productId": keep_id, "evaluatedAt": None})  # se reevalúa con el producto unificado
+        migrated["alerts"] += 1
+    for snap in db.collection_group("wishlists").where(filter=FieldFilter("productIds", "array_contains", remove_id)).stream():
+        ids = [keep_id if p == remove_id else p for p in (snap.to_dict() or {}).get("productIds", [])]
+        snap.reference.update({"productIds": list(dict.fromkeys(ids))})
+        migrated["wishlists"] += 1
+
+    refresh_summaries(db, {keep_id})
+    log_action(db, "PRODUCTS_MERGED", "product", remove_id, {"mergedInto": keep_id, "listingsMoved": moved, **migrated})
+    return {"listingsMoved": moved, **migrated}
+
+
 def _format(listing: dict) -> str:
     price = listing.get("currentPriceCents")
     price_txt = f"S/ {price / 100:,.2f}" if price else "—"
@@ -132,6 +197,10 @@ def main(argv: list[str] | None = None) -> int:
     p_list.add_argument("--limit", type=int, default=50)
     for name in ("approve", "reject", "create"):
         sub.add_parser(name).add_argument("listing_id")
+    sub.add_parser("duplicates")
+    p_merge = sub.add_parser("merge")
+    p_merge.add_argument("keep_product_id")
+    p_merge.add_argument("remove_product_id")
     p_assign = sub.add_parser("assign")
     p_assign.add_argument("listing_id")
     p_assign.add_argument("product_id")
@@ -155,6 +224,15 @@ def main(argv: list[str] | None = None) -> int:
             print("Rechazada")
         elif args.command == "create":
             print(f"Producto creado: {create(db, args.listing_id)}")
+        elif args.command == "duplicates":
+            items = list_duplicates(db)
+            print(f"{len(items)} posibles duplicados:\n")
+            for item in items:
+                print(f"{item['id']}\n    asociado a {item.get('productId')} · también coincide con "
+                      f"{item.get('possibleDuplicateOf')}\n    {item.get('title', '')[:90]}")
+        elif args.command == "merge":
+            result = merge(db, args.keep_product_id, args.remove_product_id)
+            print(f"Unificado {args.remove_product_id} -> {args.keep_product_id}: {result}")
     except ReviewError as exc:
         print(f"ERROR: {exc}")
         return 1

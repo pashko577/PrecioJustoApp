@@ -624,6 +624,24 @@ Antes de activar una tienda:
 
 > La presencia de información pública o de una instrucción en `robots.txt` no debe interpretarse por sí sola como una autorización legal ilimitada para cualquier uso.
 
+#### Evaluación de tiendas (noviembre 2026)
+
+El detalle de cada evaluación está en `scraping-engine/app/data/stores.json`.
+
+| Tienda | Plataforma | Estado | Motivo |
+|---|---|---|---|
+| Coolbox | VTEX | ✅ Activa (6 h) | Términos sin prohibición; API pública de catálogo |
+| Plaza Vea, Oechsle, Promart | VTEX | ✅ Activas (12 h) | Términos sin prohibición de extracción |
+| Efe, La Curacao | Magento | ✅ Activas (12 h) | Términos sin prohibición; listado HTML con pausas de 6 s |
+| SercoPlus, Impacto | PrestaShop / Next.js | ⏳ Viables, sin extractor | Detrás de Cloudflare: solo si responden sin desafío (no se evade) |
+| Memory Kings | Sitio propio | ⏳ Viable, sin extractor | No publica términos |
+| Tottus | — | ⏸ Baja prioridad | Supermercado con poca oferta en las categorías actuales |
+| Wong | VTEX | ⏸ Pendiente | No se pudieron leer los términos |
+| Falabella, Sodimac | — | ❌ No viable | Sus términos prohíben reproducir o explotar contenidos y "compilaciones de datos" sin consentimiento escrito |
+| Hiraoka | — | ❌ No viable | Prohíbe expresamente la "extracción y/o reutilización" |
+
+Para las tiendas no viables la alternativa es un programa de afiliados o un permiso escrito. Mercado Libre requiere su API oficial con una aplicación de desarrollador registrada.
+
 ### 7.8. Administración sin panel web (MVP)
 
 Mientras no exista panel de administración, las tareas se harán con scripts en `scraping-engine/app/admin/`, ejecutados localmente o con `workflow_dispatch`:
@@ -635,7 +653,7 @@ Mientras no exista panel de administración, las tareas se harán con scripts en
 | `seed.py` ✅ | Datos de ejemplo en el emulador (categorías, catálogo de muestra y ofertas ficticias) |
 | `set_role.py` ✅ | Asignar o quitar rol `admin` u `operator` (custom claims de Firebase Auth); queda en auditLogs |
 | `stores.py` ✅ | Registrar tiendas y su evaluación (`app/data/stores.json`). **Se niega a activar una tienda sin evaluación registrada** (7.7) |
-| `review_matches.py` ✅ | `list`, `approve`, `assign`, `reject`, `create`: revisa asociaciones, recalcula precios y registra en auditLogs |
+| `review_matches.py` ✅ | `list`, `approve`, `assign`, `reject`, `create`: revisa asociaciones, recalcula precios y registra en auditLogs. `duplicates` y `merge`: unifica productos duplicados migrando favoritos, alertas y listas |
 | `status.py` ✅ | Estado de tiendas (al día / desactualizada / nunca corrió), pendientes y productos; resumen en cada ejecución de scraping |
 | `app/backup/export.py` + `restore.py` ✅ | Respaldo JSONL comprimido (semanal en GitHub Actions) y restauración verificable en el emulador |
 
@@ -728,6 +746,19 @@ Ajustes descubiertos con datos reales de Coolbox:
 - La frecuencia (Hz) y la potencia (W) bloquean igual que la capacidad: 165 Hz y 180 Hz son modelos distintos.
 
 Resultado de la primera corrida real (Coolbox, 1 página por categoría): 251 publicaciones, **248 asociadas automáticamente (99 %)**, 3 en revisión manual (modelos realmente distintos), 0 falsos positivos detectados.
+
+#### Asociación entre tiendas de distintas plataformas
+
+Con seis tiendas (VTEX y Magento) aparecieron dos problemas nuevos y sus soluciones:
+
+- **Código interno en vez de modelo.** En Plaza Vea, Oechsle y Promart el campo `productReference` es un correlativo interno ("20329474"); el modelo real está en la especificación "Modelo". `pick_mpn` usa `productReference` solo si parece un código de modelo (letras y números) y, si no, la especificación.
+- **Códigos de modelo compartidos.** Un token con letras y dígitos de 5 o más caracteres (`LS51BPP`, `WT19BVTB`) que aparece en ambos títulos cuenta como coincidencia de modelo (+30), aunque el producto se haya creado con otro "modelo".
+- **Enriquecimiento de identificadores.** Cuando una publicación se asocia, sus GTIN/MPN que el producto todavía no tiene se agregan a `identifierKeys` (una sola vez: marca `keysSynced`). Así la siguiente tienda que publique ese código coincide directamente en el nivel 1.
+- **Posibles duplicados.** Si el código ya pertenece a **otro** producto no se fusiona nada automáticamente (RN-06): la publicación queda con `possibleDuplicateOf` y un operador decide con `review_matches duplicates` / `merge`.
+
+**Unificación (`merge`).** Mueve las publicaciones al producto conservado, une identificadores y palabras de búsqueda, migra favoritos, alertas (que se reevalúan) y listas de los usuarios, y deja el producto eliminado con `status: MERGED` y `mergedInto`. La app redirige automáticamente al producto conservado si alguien abre un enlace antiguo.
+
+Ejemplo en el emulador: la lavadora LG WT19BVTB cuesta S/ 1,549 en Efe y La Curacao frente a S/ 2,049 en Plaza Vea y Promart.
 
 ---
 
@@ -1251,7 +1282,7 @@ La viabilidad jurídica y contractual deberá evaluarse individualmente para cad
 | Las publicaciones de la tienda se leen en **una consulta** al inicio; la detección de retiradas las reutiliza | Sin lecturas extra; la corrida es mucho más rápida |
 | Escrituras en lotes de 400 | Menos viajes de red |
 | El corrector de nombres solo actúa si el título cambió (1 lectura) | Evita leer categorías completas |
-| Frecuencia por tienda: Coolbox cada 6 h; Plaza Vea, Oechsle y Promart cada 12 h (vigencia 24 h) | Menos corridas en tiendas grandes |
+| Frecuencia por tienda: Coolbox cada 6 h; Plaza Vea, Oechsle, Promart, Efe y La Curacao cada 12 h (vigencia 24 h) | Menos corridas en tiendas grandes |
 
 La app y el motor usan la misma regla: una oferta con `missedRuns == 0` está verificada en `max(lastCheckedAt, stores.lastCompleteRunAt)`.
 
@@ -1317,7 +1348,7 @@ Diez sprints de dos semanas, pensados para **una persona**. La duración podrá 
 | 2 | Usuarios | Registro, login (correo y Google), recuperación de contraseña, perfil, eliminación de cuenta | ✅ (Google Sign-In pendiente: falta correo de soporte) |
 | 3 | Catálogo | Categorías, productos, carga inicial, búsqueda por tokens | ✅ |
 | 4 | Primer extractor real | 1 tienda evaluada (7.7), spider, normalización, matching, workflow programado | ✅ Coolbox (falta el secret de producción) |
-| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 4 tiendas (Coolbox, Plaza Vea, Oechsle, Promart) |
+| 5 | Comparación | Ofertas por producto, vigencia, costo total, resumen de precios | ✅ 6 tiendas (Coolbox, Plaza Vea, Oechsle, Promart con VTEX; Efe y La Curacao con Magento) y asociación entre plataformas |
 | 6 | Historial | Puntos mensuales, gráfico, mínimo/máximo/promedio | ✅ Gráfico escalonado por tienda, cifras de 30/90 días (promedio ponderado por tiempo) y tabla de datos |
 | 7 | Seguimiento | Favoritos, listas y alertas | ✅ Favoritos (con cambio de precio desde que se guardó), listas, alertas (una por producto, "¡Ya cumple!") y límites del plan gratuito |
 | 8 | Notificaciones | Push con FCM, evaluación de alertas en el motor, bandeja de notificaciones | ✅ Evaluación RN-08 tras cada corrida, bandeja con no leídas y push FCM (Android/iOS; web pendiente) |

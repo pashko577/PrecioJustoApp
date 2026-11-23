@@ -59,9 +59,9 @@ def test_price_list_price_and_availability():
 
 def test_identifiers_are_canonical():
     offers, _ = all_offers()
-    assert offers["90011"].identifiers == {"GTIN": "2001234567893", "MPN": "DBK14-R5"}
+    assert offers["90011"].identifiers == {"GTIN": "2001234567893", "MPN": "DBK14R5"}
     assert offers["90021"].identifiers == {}       # sin EAN ni referencia
-    assert offers["90031"].identifiers == {"MPN": "DPX-128"}  # EAN "12345" inválido se descarta
+    assert offers["90031"].identifiers == {"MPN": "DPX128"}  # EAN "12345" inválido se descarta
 
 
 def test_default_seller_is_used_not_cheapest_marketplace_seller():
@@ -204,3 +204,17 @@ def test_is_due():
     assert not is_due({"scrapingIntervalMinutes": 720, "lastCompleteRunAt": now - timedelta(hours=6)}, now)
     assert is_due({"scrapingIntervalMinutes": 720, "lastCompleteRunAt": now - timedelta(hours=11, minutes=30)}, now)
     assert is_due({"scrapingIntervalMinutes": 360, "lastCompleteRunAt": now - timedelta(hours=6)}, now)
+
+
+
+# ---------- Código de fabricante real en VTEX ----------
+
+def test_pick_mpn_prefers_real_model_code():
+    from app.spiders.vtex.base import looks_like_model_code, pick_mpn
+    # Coolbox: productReference es el modelo real
+    assert pick_mpn({"productReference": "SA400S37960GB", "Modelo": ["SSD A400"]}) == "SA400S37960GB"
+    # Intercorp: productReference es un correlativo; el modelo está en la especificación
+    assert pick_mpn({"productReference": "2974961", "Modelo": ["RI-795DI"]}) == "RI-795DI"
+    assert pick_mpn({"productReference": "20608011"}) is None
+    assert pick_mpn({"productReference": "", "Modelo": ["Sin código"]}) is None
+    assert looks_like_model_code("LS51BPP") and not looks_like_model_code("148753")

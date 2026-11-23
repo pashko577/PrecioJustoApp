@@ -71,6 +71,7 @@ class Product {
     this.identifiers = const {},
     this.searchTokens = const [],
     this.status = 'ACTIVE',
+    this.mergedInto,
     this.summary = const PriceSummary(),
   });
 
@@ -89,6 +90,9 @@ class Product {
   /// Palabras y prefijos normalizados (ver `search_normalizer.dart`).
   final List<String> searchTokens;
   final String status;
+
+  /// Si el producto se unificó con otro (status MERGED), el producto conservado.
+  final String? mergedInto;
   final PriceSummary summary;
 
   factory Product.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -108,6 +112,7 @@ class Product {
       },
       searchTokens: List<String>.from(d['searchTokens'] as List? ?? const []),
       status: d['status'] as String? ?? 'ACTIVE',
+      mergedInto: d['mergedInto'] as String?,
       summary: PriceSummary.fromMap(d['summary'] as Map<String, dynamic>?),
     );
   }

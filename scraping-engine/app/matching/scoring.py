@@ -84,6 +84,16 @@ def expand_versions(words: set[str]) -> set[str]:
     return result
 
 
+def model_codes(words: set[str] | list[str]) -> set[str]:
+    """Tokens con letras y dígitos que parecen códigos de modelo ("ls51bpp", "ri-795di").
+
+    Excluye capacidades/unidades ("1tb", "180hz") y tokens cortos.
+    """
+    return {w.replace("-", "") for w in words
+            if len(w.replace("-", "")) >= 5 and re.search(r"[a-z]", w) and re.search(r"\d", w)
+            and not _CAPACITY_RE.match(w) and not _JOINED_VERSION_RE.match(w)}
+
+
 def capacities(words: list[str]) -> set[str]:
     return {w for w in words if _CAPACITY_RE.match(w)}
 
@@ -115,8 +125,8 @@ def score(listing: Listing, candidate: Candidate) -> int:
         points += 20
 
     model_words = set(word_tokens(candidate.model)) - set(word_tokens(candidate.brand))
-    if model_words and model_words <= l_words:
-        points += 30
+    if (model_words and model_words <= l_words) or (model_codes(c_words) & model_codes(l_words)):
+        points += 30  # modelo declarado contenido en el título, o código de modelo compartido
 
     # Características: se compara contra el conjunto MÁS PEQUEÑO. Un título corto que omite
     # características ("Kingston SSD NV3 1TB") no se castiga; uno que trae otras distintas, sí.

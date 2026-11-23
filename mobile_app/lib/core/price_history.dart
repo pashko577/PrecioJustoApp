@@ -175,7 +175,8 @@ HistoryStats computeHistoryStats(List<OfferHistory> histories, {required DateTim
 
 /// Orden fijo de colores por tienda: el color sigue a la tienda en todos los productos,
 /// nunca a su posición en la lista. Nuevas tiendas se agregan AL FINAL (no reordenar).
-const storeColorOrder = ['COOLBOX', 'PLAZAVEA', 'OECHSLE', 'PROMART', 'WONG'];
+/// (WONG se retiró de la lista antes de activarse: nunca se mostró con color.)
+const storeColorOrder = ['COOLBOX', 'PLAZAVEA', 'OECHSLE', 'PROMART', 'EFE', 'LACURACAO'];
 
 /// Asigna un color (índice 0-based) a cada tienda de un gráfico, sin repetir:
 /// - las tiendas conocidas conservan SIEMPRE su color fijo (el color sigue a la tienda);

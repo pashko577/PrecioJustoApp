@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/money.dart';
@@ -28,6 +29,8 @@ class ProductScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (p) => p == null
             ? const Center(child: Text('Producto no encontrado'))
+            : p.mergedInto != null
+            ? _MergedRedirect(target: p.mergedInto!)
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -180,4 +183,28 @@ class ComparisonHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Un producto unificado lleva al producto conservado (enlaces antiguos, favoritos, notificaciones).
+class _MergedRedirect extends StatefulWidget {
+  const _MergedRedirect({required this.target});
+
+  final String target;
+
+  @override
+  State<_MergedRedirect> createState() => _MergedRedirectState();
+}
+
+class _MergedRedirectState extends State<_MergedRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) GoRouter.of(context).replace('/product/${widget.target}');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Center(child: CircularProgressIndicator());
 }

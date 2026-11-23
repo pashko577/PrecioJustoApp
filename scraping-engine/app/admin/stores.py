@@ -30,16 +30,21 @@ def load_stores(path: Path = STORES_FILE) -> list[dict]:
     if len(codes) != len(set(codes)):
         raise ValueError("Códigos de tienda duplicados en stores.json")
     for store in stores:
-        unknown = set((store.get("vtexCategories") or {}).values()) - valid_categories
+        mapped = {**(store.get("vtexCategories") or {}), **(store.get("categoryPaths") or {})}
+        unknown = set(mapped.values()) - valid_categories
         if unknown:
             raise ValueError(f"{store['code']}: categorías desconocidas {sorted(unknown)}")
         if store.get("scrapingEnabled") and store.get("platform") == "VTEX" and not store.get("vtexCategories"):
             raise ValueError(f"{store['code']}: tienda VTEX activa sin vtexCategories")
+        if store.get("scrapingEnabled") and store.get("platform") == "MAGENTO" and not store.get("categoryPaths"):
+            raise ValueError(f"{store['code']}: tienda Magento activa sin categoryPaths")
         review = store.get("review") or {}
         missing = [f for f in REQUIRED_REVIEW_FIELDS if not review.get(f)]
         if store.get("scrapingEnabled") and missing:
             # Sección 7.7: ninguna tienda se activa sin su evaluación registrada.
             raise ValueError(f"{store['code']}: falta la evaluación ({', '.join(missing)}) para activar la extracción.")
+        if store.get("scrapingEnabled") and not store.get("spider"):
+            raise ValueError(f"{store['code']}: tienda activa sin extractor (spider)")
     return stores
 
 

@@ -37,7 +37,7 @@ TRACKED_FIELDS = ("currentPriceCents", "availability", "currentShippingCents")
 # Si alguno de estos cambia, la publicación se reescribe (aunque el precio sea el mismo).
 MATERIAL_FIELDS = TRACKED_FIELDS + (
     "title", "listPriceCents", "sellerName", "productUrl", "condition", "storeName", "brand",
-    "model", "identifiers", "categoryHint", "productId", "matchStatus",
+    "model", "identifiers", "categoryHint", "productId", "matchStatus", "possibleDuplicateOf", "keysSynced",
 )
 WRITE_BATCH_SIZE = 400
 GONE_AFTER_MISSED_RUNS = 3
@@ -97,7 +97,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.pending_writes = 0
         self.write_all = False
         self.counters = {"found": 0, "saved": 0, "changed": 0, "matched": 0, "pending": 0, "unmatched": 0,
-                         "gone": 0, "duplicates": 0, "written": 0, "unchanged": 0}
+                         "gone": 0, "duplicates": 0, "written": 0, "unchanged": 0,
+                         "possible_duplicates": 0}
 
     def open_spider(self, spider=None):
         spider = self.spider
@@ -138,11 +139,22 @@ class FirestorePipeline(CrawlerAwarePipeline):
         decision = self.matcher.match(item, previous)
         if previous and previous.get("title") != item.title:
             self.matcher.refresh_owned_name(item, decision.product_id)
+        # Completar identificadores del producto: solo si la oferta es nueva, cambió sus códigos o
+        # nunca se sincronizó (cuesta lecturas; no se repite en cada corrida).
+        duplicate_of = previous.get("possibleDuplicateOf") if previous else None
+        keys_synced = bool(previous and previous.get("keysSynced") and previous.get("identifiers") == item.identifiers)
+        if decision.status in ("MATCHED_AUTO", "MATCHED_MANUAL") and not keys_synced:
+            duplicate_of = self.matcher.enrich_product_keys(item, decision.product_id)
+            keys_synced = True
+            if duplicate_of:
+                self.counters["possible_duplicates"] += 1
         data.update({
             "productId": decision.product_id,
             "matchStatus": decision.status,
             "matchScore": decision.score,
             "matchReason": decision.reason,
+            "possibleDuplicateOf": duplicate_of,
+            "keysSynced": keys_synced,
         })
         self.counters[{"MATCHED_AUTO": "matched", "MATCHED_MANUAL": "matched",
                        "PENDING_REVIEW": "pending"}.get(decision.status, "unmatched")] += 1
@@ -256,6 +268,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
             "unmatched": self.counters["unmatched"],
             "productsCreated": self.matcher.created_products if self.matcher else 0,
             "productsRenamed": self.matcher.renamed_products if self.matcher else 0,
+            "productsEnriched": self.matcher.enriched_products if self.matcher else 0,
+            "possibleDuplicates": self.counters["possible_duplicates"],
             "written": self.counters["written"],
             "unchanged": self.counters["unchanged"],
             "markedGone": self.counters["gone"],

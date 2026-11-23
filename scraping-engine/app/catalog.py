@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.normalizers.identifiers import canonical_gtin
+from app.normalizers.identifiers import canonical_gtin, canonical_mpn
 from app.normalizers.text import normalize_text, search_tokens
 
 CATEGORIES_FILE = Path(__file__).resolve().parent / "data" / "categories.json"
@@ -84,7 +84,7 @@ def identifier_keys(identifiers: dict[str, list[str] | str] | None) -> list[str]
                     raise CatalogError(f"{kind_up} inválido (longitud o dígito verificador): {value!r}")
                 keys.add(f"GTIN:{gtin}")
             else:
-                keys.add(f"{kind_up}:{clean.upper()}")
+                keys.add(f"{kind_up}:{canonical_mpn(clean)}")
     return sorted(keys)
 
 

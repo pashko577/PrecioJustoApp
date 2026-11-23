@@ -117,3 +117,40 @@ def test_backup_roundtrip(db, tmp_path):
     assert count == full["total"]
     assert db.document("users/ana/alerts/a1").get().to_dict()["targetPriceCents"] == 200000
     assert db.document("storeProducts/COOLBOX__1/history/2026-11").get().to_dict() == original_history
+
+
+
+def test_merge_products_and_migrate_user_tracking(db):
+    seed_review(db)
+    db.document("products/dup-a").set({"displayName": "Lavadora LG WT19BVTB", "categorySlug": "lavadoras",
+                                       "status": "ACTIVE", "identifierKeys": ["GTIN:2001234567893"],
+                                       "searchTokens": ["lg", "lavadora"], "summary": {}})
+    db.document("products/dup-b").set({"displayName": "Lavadora LG 19kg WT19BVTB", "categorySlug": "lavadoras",
+                                       "status": "ACTIVE", "identifierKeys": ["MPN:WT19BVTB"],
+                                       "searchTokens": ["wt19bvtb"], "summary": {}})
+    base = {"storeCode": "COOLBOX", "status": "ACTIVE", "availability": "AVAILABLE", "currency": "PEN",
+            "lastCheckedAt": NOW, "missedRuns": 0, "matchStatus": "MATCHED_AUTO", "createdAt": NOW}
+    db.document("storeProducts/A__1").set({**base, "productId": "dup-a", "currentPriceCents": 204900, "title": "a"})
+    db.document("storeProducts/B__1").set({**base, "productId": "dup-b", "currentPriceCents": 154900, "title": "b",
+                                           "possibleDuplicateOf": "dup-a"})
+    db.document("users/ana/favorites/dup-b").set({"productId": "dup-b", "productName": "x"})
+    db.document("users/ana/alerts/al1").set({"productId": "dup-b", "status": "ACTIVE", "targetPriceCents": 160000,
+                                             "evaluatedAt": NOW})
+    db.document("users/ana/wishlists/l1").set({"name": "Casa", "productIds": ["dup-b", "dup-a"]})
+
+    assert [d["id"] for d in review.list_duplicates(db)] == ["B__1"]
+    result = review.merge(db, "dup-a", "dup-b")
+    assert result == {"listingsMoved": 1, "favorites": 1, "alerts": 1, "wishlists": 1}
+
+    kept = db.document("products/dup-a").get().to_dict()
+    assert set(kept["identifierKeys"]) == {"GTIN:2001234567893", "MPN:WT19BVTB"}
+    assert kept["summary"]["minPriceCents"] == 154900  # ahora compara las dos ofertas
+    removed = db.document("products/dup-b").get().to_dict()
+    assert (removed["status"], removed["mergedInto"]) == ("MERGED", "dup-a")
+    assert db.document("storeProducts/B__1").get().to_dict()["possibleDuplicateOf"] is None
+    assert db.document("users/ana/favorites/dup-a").get().exists
+    assert not db.document("users/ana/favorites/dup-b").get().exists
+    assert db.document("users/ana/alerts/al1").get().to_dict()["productId"] == "dup-a"
+    assert db.document("users/ana/wishlists/l1").get().to_dict()["productIds"] == ["dup-a"]
+    with pytest.raises(review.ReviewError):
+        review.merge(db, "dup-a", "dup-b")  # ya unificado

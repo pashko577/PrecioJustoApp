@@ -89,7 +89,7 @@ Probar contra el emulador (una página por categoría, ~1 minuto, pausas de 5 s 
 cd scraping-engine
 $env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8085"
 .venv\Scripts\python -m app.admin.seed
-.venv\Scripts\scrapy crawl coolbox -a max_pages=1     # también: plazavea, oechsle, promart
+.venv\Scripts\scrapy crawl coolbox -a max_pages=1     # también: plazavea, oechsle, promart, efe, lacuracao
 ```
 
 En producción lo ejecuta el workflow [scrape.yml](.github/workflows/scrape.yml) cada 6 horas, **solo si existe el secret `FIREBASE_SERVICE_ACCOUNT`**:
@@ -122,6 +122,8 @@ cd scraping-engine
 .venv\Scripts\python -m app.admin.status                                # estado de tiendas y pendientes
 .venv\Scripts\python -m app.admin.review_matches list                   # asociaciones por revisar
 .venv\Scripts\python -m app.admin.review_matches approve COOLBOX__123   # o assign / reject / create
+.venv\Scripts\python -m app.admin.review_matches duplicates             # posibles duplicados entre tiendas
+.venv\Scripts\python -m app.admin.review_matches merge producto-a producto-b  # unifica b en a (migra favoritos y alertas)
 .venv\Scripts\python -m app.admin.set_role correo@ejemplo.com admin     # requiere FIREBASE_AUTH_EMULATOR_HOST en el emulador
 ```
 
