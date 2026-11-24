@@ -31,7 +31,7 @@ PAGE_SIZE = 50          # máximo que permite VTEX por solicitud
 # catálogos completos (Plaza Vea: 7 200 publicaciones) no cabe en la cuota gratuita de Firestore.
 DEFAULT_SCOPE_PAGES = 4
 MAX_OFFSET = 2500       # VTEX no permite paginar más allá de este índice
-STOP_STATUSES = (403, 429)
+STOP_STATUSES = (403, 426, 429)
 # Margen para que una corrida programada no se salte por unos minutos de diferencia del cron.
 SCHEDULE_TOLERANCE = timedelta(minutes=45)
 

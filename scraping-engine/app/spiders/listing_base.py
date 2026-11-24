@@ -23,7 +23,8 @@ from app.models.offer import ScrapedOffer
 from app.pipelines.job_errors import record_error
 from app.spiders.vtex.base import is_due
 
-STOP_STATUSES = (403, 429, 503)
+# 426: Efe (Fastly) lo responde a servidores de centros de datos (GitHub Actions): es un bloqueo.
+STOP_STATUSES = (403, 426, 429, 503)
 MAX_PAGES_PER_CATEGORY = 60  # tope de seguridad
 # Alcance normal por categoría (cuota gratuita de Firestore); configurable por tienda.
 DEFAULT_SCOPE_PAGES = 6
