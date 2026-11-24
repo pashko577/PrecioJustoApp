@@ -66,6 +66,7 @@ class ProductMatcher:
         self.last_attempted = False
         self.writes = 0
         self._missing_keys: set[str] = set()  # identificadores ya buscados sin resultado
+        self.created_docs: dict[str, dict] = {}  # productos nuevos aún sin guardar
 
     def _load_category(self, slug: str) -> dict[str, Candidate]:
         if slug not in self._by_category:
@@ -132,6 +133,10 @@ class ProductMatcher:
                     return MatchDecision(pid, "MATCHED_AUTO", 100, "producto nuevo creado desde identificador")
             return decision
         return MatchDecision(None, "UNMATCHED", None, "sin categoría reconocida")
+
+    def take_created(self, product_id: str | None) -> dict | None:
+        """Documento del producto recién creado para esta publicación (lo guarda el pipeline)."""
+        return self.created_docs.pop(product_id, None) if product_id else None
 
     def enrich_product_keys(self, offer: ScrapedOffer, product_id: str | None) -> str | None:
         """Agrega al producto asociado los identificadores de la oferta que todavía no tiene.
@@ -231,8 +236,9 @@ class ProductMatcher:
             "createdAt": firestore.SERVER_TIMESTAMP,
             "updatedAt": firestore.SERVER_TIMESTAMP,
         })
-        self.db.collection("products").document(product_id).set(data)
-        self.writes += 1
+        # No se escribe aquí: el pipeline lo guarda junto con su publicación y su resumen ya
+        # calculado (2 escrituras por producto nuevo en vez de 4). Ver `take_created`.
+        self.created_docs[product_id] = data
         self._by_category.setdefault(slug, {})[product_id] = candidate_from_doc(product_id, data)
         self._owned_by[offer.doc_id] = product_id
         for key in data.get("identifierKeys", []):

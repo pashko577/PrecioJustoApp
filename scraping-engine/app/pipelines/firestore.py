@@ -3,6 +3,10 @@
 Por cada oferta:
 - `storeProducts/{storeCode}__{externalId}`: estado actual de la publicación + asociación al producto.
 - `storeProducts/{id}/history/{YYYY-MM}`: punto nuevo SOLO si cambió precio, disponibilidad o envío (RN-07).
+  Una publicación nueva no crea historial: su estado inicial ya está en la publicación
+  (`currentPriceCents` desde `lastChangedAt`). Con el primer cambio se guardan ambos puntos.
+- Un producto creado desde una publicación se guarda una sola vez, ya con su resumen, en el mismo
+  lote que la publicación.
 
 Cuota gratuita: una publicación que no cambió NO se reescribe. Su verificación queda
 registrada en `stores/{code}.lastCompleteRunAt` (una escritura por corrida completa): una
@@ -37,7 +41,7 @@ from app.normalizers.text import word_tokens
 from app.pipelines.base import CrawlerAwarePipeline
 from app.postprocess.alerts import evaluate_alerts
 from app.pipelines.job_errors import record_error
-from app.postprocess.summary import refresh_summaries
+from app.postprocess.summary import compute_summary, product_image, refresh_summaries
 from app.quota import QuotaTracker
 
 TRACKED_FIELDS = ("currentPriceCents", "availability", "currentShippingCents")
@@ -139,7 +143,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.quota = QuotaTracker(self.db)
         store_doc = self.db.collection("stores").document(store_code).get()
         self.reads += 1
-        self.store_name = (store_doc.to_dict() or {}).get("name", store_code)
+        self.store_doc = store_doc.to_dict() or {}
+        self.store_name = self.store_doc.get("name", store_code)
         self.matcher = ProductMatcher(self.db, {c["slug"] for c in flatten_categories()})
         # Una sola consulta con todas las publicaciones de la tienda (en vez de una lectura por oferta).
         query = self.db.collection("storeProducts").where(filter=FieldFilter("storeCode", "==", store_code))
@@ -251,6 +256,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
                 "previousPriceCents": None,
                 "lastChangedAt": item.checked_at,
                 "createdAt": firestore.SERVER_TIMESTAMP,
+                "historyStarted": False,  # el historial se crea con el primer cambio
             })
         elif changed:
             if previous.get("currentPriceCents") != data["currentPriceCents"]:
@@ -260,30 +266,46 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.seen.add(item.doc_id)
         self.counters["saved"] += 1
         # Un reintento sin pareja se guarda igual (su fecha evita repetirlo en cada corrida).
-        if not (self.write_all or retried_unmatched or needs_write(previous, data)):
+        created = self.matcher.take_created(decision.product_id)
+        if not (self.write_all or retried_unmatched or created or needs_write(previous, data)):
             # Sin cambios: no se escribe; la verificación la registra lastCompleteRunAt de la tienda.
             self.counters["unchanged"] += 1
             return item
 
         # Solo las asociaciones confirmadas aportan precio al producto (RN-06).
-        if decision.status in ("MATCHED_AUTO", "MATCHED_MANUAL") and decision.product_id:
+        if decision.status in ("MATCHED_AUTO", "MATCHED_MANUAL") and decision.product_id and not created:
             self.affected_products.add(decision.product_id)
         if previous and previous.get("productId") and previous.get("productId") != decision.product_id:
             self.affected_products.add(previous["productId"])
 
         batch = self.batch
+        history = changed and previous is not None
         if changed:
             self.counters["changed"] += 1
+        if history:
             month = item.checked_at.strftime("%Y-%m")
-            point = {"t": item.checked_at, "p": item.price_cents, "a": item.availability, "s": item.shipping_cents}
+            points = [{"t": item.checked_at, "p": item.price_cents, "a": item.availability, "s": item.shipping_cents}]
+            if previous.get("historyStarted") is False and previous.get("lastChangedAt"):
+                # Primer cambio: se guarda también el estado inicial, que solo estaba en la publicación.
+                points.insert(0, {"t": previous["lastChangedAt"], "p": previous.get("currentPriceCents"),
+                                  "a": previous.get("availability"), "s": previous.get("currentShippingCents")})
             batch.set(
                 ref.collection("history").document(month),
-                {"month": month, "points": firestore.ArrayUnion([point]), "lastCheckedAt": item.checked_at},
+                {"month": month, "points": firestore.ArrayUnion(points), "lastCheckedAt": item.checked_at},
                 merge=True,
             )
+            data["historyStarted"] = True
         batch.set(ref, data, merge=True)
         self.counters["written"] += 1
-        self.pending_writes += 2 if changed else 1
+        self.pending_writes += 2 if history else 1
+        if created:
+            created["summary"] = compute_summary([data], {item.store_code: self.store_doc}, item.checked_at)
+            if image := product_image([data]):
+                created["imageUrl"] = image
+            batch.set(self.db.collection("products").document(decision.product_id), created)
+            self.pending_writes += 1
+            # Se guarda ya: otra publicación de esta corrida puede asociarse y completar sus códigos.
+            self._flush()
         if self.pending_writes >= WRITE_BATCH_SIZE:
             self._flush()
         return item

@@ -179,6 +179,7 @@ class StoreOffer {
     this.sellerName,
     this.currency = 'PEN',
     this.missedRuns = 0,
+    this.lastChangedAt,
   });
 
   final String id;
@@ -199,6 +200,9 @@ class StoreOffer {
   /// Corridas completas seguidas en que la publicación no apareció (0 = apareció en la última).
   final int missedRuns;
 
+  /// Desde cuándo rige el precio/disponibilidad actual (el motor lo fija en cada cambio).
+  final DateTime? lastChangedAt;
+
   /// Copia con otra fecha de verificación (ver `effectiveCheckedAt`).
   StoreOffer withCheckedAt(DateTime checkedAt) => StoreOffer(
     id: id,
@@ -214,6 +218,7 @@ class StoreOffer {
     sellerName: sellerName,
     currency: currency,
     missedRuns: missedRuns,
+    lastChangedAt: lastChangedAt,
   );
 
   factory StoreOffer.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -234,6 +239,7 @@ class StoreOffer {
       sellerName: d['sellerName'] as String?,
       currency: d['currency'] as String? ?? 'PEN',
       missedRuns: _int(d['missedRuns']) ?? 0,
+      lastChangedAt: _date(d['lastChangedAt']),
     );
   }
 }

@@ -51,6 +51,17 @@ List<PricePoint> parseHistoryPoints(List<Map<String, dynamic>> monthDocs, DateTi
   return result;
 }
 
+/// Agrega el estado vigente de la oferta (precio desde `lastChangedAt`) si el historial no lo
+/// tiene: una publicación nueva no guarda historial hasta su primer cambio de precio.
+List<PricePoint> withCurrentState(List<PricePoint> points, StoreOffer offer) {
+  final since = offer.lastChangedAt;
+  if (since == null || offer.priceCents <= 0 || points.any((p) => p.at.isAtSameMomentAs(since))) return points;
+  return [
+    ...points,
+    PricePoint(at: since, priceCents: offer.priceCents, availability: offer.availability),
+  ]..sort((a, b) => a.at.compareTo(b.at));
+}
+
 /// Meses (`YYYY-MM`) que cubren el periodo de [days] días hasta [now].
 List<String> monthsCovering(DateTime now, int days) {
   final from = now.subtract(Duration(days: days));

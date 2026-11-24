@@ -166,7 +166,7 @@ class CatalogRepository {
         ];
         return OfferHistory(
           offer: offer,
-          points: parseHistoryPoints(data, _toUtc),
+          points: withCurrentState(parseHistoryPoints(data, _toUtc), offer),
         );
       }),
     );

@@ -1325,9 +1325,11 @@ Pacífico (03:00 en Lima). Medidas:
 | Sin presupuesto, no corre | Antes de leer las publicaciones de una tienda se cuentan (1 lectura por cada 1 000); si no caben, no se hace ninguna solicitud a la tienda |
 | Alcance por categoría | `maxPagesPerCategory` en `stores.json` (por defecto 4 páginas VTEX de 50 = 200 productos; 6 páginas en tiendas HTML). Las corridas con este alcance siguen siendo completas |
 | Reintentos espaciados | Una publicación sin pareja se vuelve a intentar cada 3 días (o antes si cambian su título o sus códigos) |
+| Producto nuevo en 2 escrituras | La publicación y el producto (ya con su resumen) se guardan juntos; el historial empieza con el primer cambio de precio, guardando también el precio inicial. La app usa `lastChangedAt` como primer punto mientras no haya historial |
+| Cupo agotado al iniciar | Si Firestore responde 429 antes de empezar, la tienda se salta sin fallar y continúa en la próxima corrida |
 | Limpieza barata | Una publicación que desaparece y nunca aportó precio (sin asociar o en revisión) se **borra** (los borrados tienen su propia cuota) en vez de gastar 3 escrituras |
 
-La primera carga de las 13 tiendas toma unos días: cada corrida avanza hasta su tope y la siguiente continúa.
+La primera carga de las 13 tiendas toma unos 2 días: cada corrida avanza hasta su tope y la siguiente continúa.
 
 ### 14.4. Presupuesto diario estimado del MVP
 

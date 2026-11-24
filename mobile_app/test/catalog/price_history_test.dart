@@ -90,4 +90,27 @@ void main() {
     expect({b['DEMO_A'], b['DEMO_B']}, {1, 2}); // desconocidas: colores libres, distintos
     expect(b.values.toSet().length, 3);
   });
+
+  test('sin historial, el estado vigente de la oferta es el primer punto', () {
+    final since = DateTime.utc(2026, 11, 20);
+    final o = StoreOffer(
+      id: 'COOLBOX__1',
+      storeCode: 'COOLBOX',
+      storeName: 'Coolbox',
+      title: 't',
+      productUrl: 'https://x',
+      priceCents: 150000,
+      availability: Availability.available,
+      lastCheckedAt: now,
+      lastChangedAt: since,
+    );
+    final points = withCurrentState(const [], o);
+    expect(points.single.priceCents, 150000);
+    expect(points.single.at, since);
+    // Si el historial ya tiene ese cambio, no se duplica.
+    expect(withCurrentState(points, o).length, 1);
+    final history = OfferHistory(offer: o, points: points);
+    expect(history.priceAt(DateTime.utc(2026, 11, 21)), 150000);
+    expect(history.priceAt(DateTime.utc(2026, 11, 19)), isNull);
+  });
 }
