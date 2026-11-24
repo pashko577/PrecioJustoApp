@@ -6,6 +6,7 @@
     "platform": "VTEX",
     "spider": "coolbox",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 720,
     "freshnessMinutes": 1440,
     "review": {
@@ -43,6 +44,7 @@
     "platform": "VTEX",
     "spider": "plazavea",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -82,6 +84,7 @@
     "platform": "VTEX",
     "spider": "oechsle",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -121,6 +124,7 @@
     "platform": "VTEX",
     "spider": "promart",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -156,6 +160,7 @@
     "platform": "VTEX",
     "spider": "metro",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -254,6 +259,7 @@
     "platform": "PRESTASHOP",
     "spider": "sercoplus",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -300,6 +306,7 @@
     "platform": "MEMORYKINGS",
     "spider": "memorykings",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -435,6 +442,7 @@
     "platform": "PRESTASHOP",
     "spider": "infotec",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -458,6 +466,7 @@
     "platform": "MAGENTO",
     "spider": "phantom",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "downloadDelay": 10,
@@ -479,6 +488,7 @@
     "platform": "VTEX",
     "spider": "estilos",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -516,6 +526,7 @@
     "platform": "VTEX",
     "spider": "shopstar",
     "scrapingEnabled": true,
+    "showImages": true,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {

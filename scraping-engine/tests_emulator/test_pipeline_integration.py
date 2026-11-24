@@ -69,3 +69,16 @@ def test_clear_disallowed_images_keeps_only_permitted_stores(db):
     assert "imageUrl" not in db.document("products/b").get().to_dict()
     assert db.document("products/c").get().to_dict()["imageUrl"] == "https://c.jpg"
     assert clear_disallowed_images(db) == 0  # idempotente
+
+
+def test_clear_keeps_unknown_store_images_when_all_active_stores_allow_photos(db):
+    from app.admin.images import clear_disallowed_images
+
+    db.document("stores/COOLBOX").set({"scrapingEnabled": True, "showImages": True})
+    db.document("stores/EFE").set({"scrapingEnabled": False, "showImages": False})
+    db.document("products/a").set({"imageUrl": "https://a.jpg"})  # antiguo, sin tienda registrada
+    db.document("products/e").set({"imageUrl": "https://e.jpg", "imageStoreCode": "EFE"})
+    assert clear_disallowed_images(db) == 1  # solo la de la tienda sin permiso
+    assert db.document("products/a").get().to_dict()["imageUrl"] == "https://a.jpg"
+    db.document("stores/COOLBOX").update({"showImages": False})
+    assert clear_disallowed_images(db) == 1

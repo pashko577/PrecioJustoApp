@@ -23,11 +23,25 @@ from app.postprocess.summary import allowed_image_stores, store_info
 
 def clear_disallowed_images(db) -> int:
     """Borra `imageUrl` de los productos cuya foto no viene de una tienda permitida."""
-    allowed = allowed_image_stores(store_info(db))
-    query = db.collection("products").where(filter=FieldFilter("imageUrl", ">", ""))
+    stores = store_info(db)
+    allowed = allowed_image_stores(stores)
+    active = {code for code, s in stores.items() if s.get("scrapingEnabled")}
+    # Fotos guardadas antes de registrar su tienda (sin `imageStoreCode`): se conservan solo si
+    # todas las tiendas activas permiten fotos (pudo venir de cualquiera de ellas).
+    keep_unknown = bool(active) and active <= allowed
+    if keep_unknown:
+        # Caso normal: solo se buscan fotos de tiendas sin permiso (casi siempre 0 → 1 lectura),
+        # en vez de recorrer todos los productos con foto en cada corrida.
+        disallowed = sorted(set(stores) - allowed)[:30]  # `in` admite hasta 30 valores
+        if not disallowed:
+            return 0
+        query = db.collection("products").where(filter=FieldFilter("imageStoreCode", "in", disallowed))
+    else:
+        query = db.collection("products").where(filter=FieldFilter("imageUrl", ">", ""))
     batch, pending, cleared = db.batch(), 0, 0
     for snap in query.stream():
-        if (snap.to_dict() or {}).get("imageStoreCode") in allowed:
+        store = (snap.to_dict() or {}).get("imageStoreCode")
+        if store in allowed or (store is None and keep_unknown):
             continue
         batch.update(snap.reference, {"imageUrl": firestore.DELETE_FIELD,
                                       "imageStoreCode": firestore.DELETE_FIELD})

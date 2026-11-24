@@ -1289,6 +1289,10 @@ No es asesoría legal: debe confirmarla un abogado antes del lanzamiento comerci
   que se activa únicamente con permiso escrito o licencia (por ejemplo, un programa de afiliados).
   Por defecto está desactivado en todas. El motor sigue guardando el enlace en `storeProducts`
   (no se muestra), así que activar una tienda no requiere volver a extraer nada.
+- **Estado actual (24-11-2026):** por decisión del responsable del proyecto, `showImages` está
+  activado en las 11 tiendas activas mientras la app es pequeña, **asumiendo el riesgo descrito**.
+  Pendiente antes del lanzamiento comercial o al crecer: afiliarse a las tiendas o pedir permiso, y
+  apagar `showImages` en las que no lo den (la app vuelve sola al ícono de categoría).
 - **Cómo se aplica:** el resumen de cada producto solo toma fotos de tiendas permitidas
   (`imageStoreCode`). `python -m app.admin.images`, que el workflow corre en cada ejecución, retira
   las fotos no permitidas que ya estaban guardadas. La app muestra el ícono de la categoría.
