@@ -5,8 +5,10 @@ import 'package:flutter/foundation.dart';
 
 import '../firebase_options.dart';
 
-/// Usa los emuladores locales salvo que se compile con `--dart-define=USE_EMULATORS=false`.
-const bool useEmulators = bool.fromEnvironment('USE_EMULATORS', defaultValue: true);
+/// En desarrollo (debug/profile) usa los emuladores locales, salvo `--dart-define=USE_EMULATORS=false`.
+/// Una versión de publicación (release) SIEMPRE usa producción: si buscara los emuladores en un
+/// celular real se quedaría colgada en la pantalla de inicio.
+const bool useEmulators = !kReleaseMode && bool.fromEnvironment('USE_EMULATORS', defaultValue: true);
 
 /// Host de los emuladores. El emulador de Android ve la PC como 10.0.2.2.
 /// En un celular físico, pasar la IP de la PC: `--dart-define=EMULATOR_HOST=192.168.1.50`
