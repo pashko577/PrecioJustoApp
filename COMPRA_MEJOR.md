@@ -1367,7 +1367,9 @@ producto, ofertas). Con la reserva que deja el motor alcanzaba para unas 100 vis
   `https://pashko577.github.io/PrecioJustoApp/catalog.json`. GitHub Pages lo sirve comprimido.
 - **Exportación incremental:** parte del catálogo publicado y solo lee de Firestore los documentos
   con `updatedAt` posterior (con 30 min de margen). Normalmente son cientos de lecturas por día.
-  Los domingos (corrida de las 06:15 UTC), o a pedido con `catalogo_completo`, se rearma completo.
+  Los domingos (corrida de las 12:15 UTC), o a pedido con `catalogo_completo`, se rearma completo.
+  Antes de leer estima el costo (contar cuesta 1 lectura por cada 1000) y, si pasaría las 47 000
+  lecturas del día, mantiene la versión publicada.
 - **App:** `CatalogCache` guarda el archivo en el celular, lo usa al abrir (instantáneo y sin
   internet) y pide uno nuevo cada 2 horas o al deslizar para actualizar (`If-None-Match`: 304
   si no cambió). Navegar, buscar, comparar y ver bajadas no lee Firestore. La búsqueda local usa

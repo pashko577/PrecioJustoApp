@@ -167,7 +167,8 @@ jobs:
 
   # Catálogo público para la app (catalog.json en GitHub Pages): la app navega y busca desde su
   # copia local, sin lecturas de Firestore. Incremental: solo lee lo que cambió desde la versión
-  # publicada. Completo los domingos en la corrida de las 06:15 UTC, o a pedido.
+  # publicada. Completo los domingos en la corrida de las 12:15 UTC (inicio del día de cuota), o a
+  # pedido. Si no hay cupo diario de lecturas, se mantiene la versión publicada.
   catalog:
     name: Publicar catálogo de la app
     needs: scrape
@@ -203,14 +204,14 @@ jobs:
           pip install -r requirements.txt
           FULL=""
           if [ "${{ github.event.inputs.catalogo_completo }}" = "true" ]; then FULL="--full"; fi
-          if [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "06" ]; then FULL="--full"; fi
+          if [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "12" ]; then FULL="--full"; fi
           python -m app.export.catalog --prod --yes $FULL --out ../site/catalog.json             --previous-url "$CATALOG_URL" | tee export.txt
           touch ../site/.nojekyll
           { echo "### Catálogo de la app"; cat export.txt; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-pages-artifact@v4
-        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('site/catalog.json') != ''
         with:
           path: site
       - id: deploy
-        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('site/catalog.json') != ''
         uses: actions/deploy-pages@v4

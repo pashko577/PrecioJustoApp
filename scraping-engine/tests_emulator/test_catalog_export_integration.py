@@ -50,3 +50,33 @@ def test_incremental_export_reads_only_changes(db):
     assert stats["reads"] == 2 + 1  # producto y publicación cambiados + la tienda
     assert "ps5" not in {p["id"] for p in second["products"]}
     assert second["offers"] == []  # sus ofertas se van con él
+
+
+def test_main_writes_file_and_records_quota(db, tmp_path):
+    import json
+
+    from app.export.catalog import main
+    from app.quota import quota_day
+
+    _seed(db)
+    out = tmp_path / "catalog.json"
+    assert main(["--out", str(out), "--previous-file", str(tmp_path / "no-existe.json")]) == 0
+    assert json.loads(out.read_text("utf-8"))["version"] == 1
+    used = db.document(f"system/quota-{quota_day()}").get().to_dict()
+    assert used["reads"] >= 5
+
+
+def test_main_keeps_published_catalog_without_quota(db, tmp_path):
+    import json
+
+    from app.export.catalog import PROJECT_DAILY_READS_CAP, main
+    from app.quota import quota_day
+
+    _seed(db)
+    db.document(f"system/quota-{quota_day()}").set({"reads": PROJECT_DAILY_READS_CAP})
+    published = tmp_path / "publicado.json"
+    published.write_text(json.dumps({"version": 1, "generatedAt": "2026-11-24T00:00:00Z", "products": [],
+                                      "offers": [], "stores": [], "categories": []}), "utf-8")
+    out = tmp_path / "catalog.json"
+    assert main(["--out", str(out), "--previous-file", str(published)]) == 0
+    assert json.loads(out.read_text("utf-8"))["generatedAt"] == "2026-11-24T00:00:00Z"  # sin cambios

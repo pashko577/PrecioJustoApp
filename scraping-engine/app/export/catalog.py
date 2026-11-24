@@ -28,8 +28,12 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 from app.admin.target import add_target_args, resolve_db
 from app.catalog import flatten_categories
 from app.postprocess.summary import SHOWN_MATCH_STATUSES
+from app.quota import QuotaTracker
 
 FORMAT_VERSION = 1
+# Tope diario de lecturas del proyecto que la exportación no debe pasar (el plan gratuito da 50 000;
+# con el catálogo local la app casi no lee Firestore, pero se deja margen).
+PROJECT_DAILY_READS_CAP = 47_000
 # Margen ante relojes desfasados y escrituras en curso durante la exportación anterior.
 INCREMENTAL_MARGIN = timedelta(minutes=30)
 SUMMARY_FIELDS = ("minPriceCents", "minPriceStoreCode", "maxPriceCents", "sortPriceCents", "offerCount",
@@ -132,6 +136,20 @@ def _changed(db, collection: str, since: datetime | None):
     return query.stream()
 
 
+def estimate_reads(db, previous: dict | None) -> int:
+    """Lecturas que costará exportar (contar cuesta 1 lectura por cada 1000 documentos)."""
+    since = None
+    if previous:
+        since = datetime.fromisoformat(previous["generatedAt"].replace("Z", "+00:00")) - INCREMENTAL_MARGIN
+    total = 0
+    for collection in ("products", "storeProducts"):
+        query = db.collection(collection)
+        if since is not None:
+            query = query.where(filter=FieldFilter("updatedAt", ">", since))
+        total += int(query.count().get()[0][0].value) + 1
+    return total + 30  # tiendas
+
+
 def build_catalog(db, previous: dict | None, now: datetime | None = None) -> tuple[dict, dict]:
     """Devuelve `(catálogo, estadísticas)`. Con `previous`, solo lee lo que cambió."""
     now = now or datetime.now(timezone.utc)
@@ -198,8 +216,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--full", action="store_true", help="Ignorar el catálogo previo y leer todo.")
     args = parser.parse_args(argv)
     db = resolve_db(args)
-    previous = None if args.full else load_previous(args.previous_url, args.previous_file)
+    published = load_previous(args.previous_url, args.previous_file)
+    previous = None if args.full else published
+    quota = QuotaTracker(db)
+    estimate = estimate_reads(db, previous)
+    if quota.used_reads + estimate > PROJECT_DAILY_READS_CAP:
+        if previous is None and published is not None:
+            previous = published  # sin cupo para rearmarlo completo: se actualiza solo lo cambiado
+            estimate = estimate_reads(db, previous)
+        if quota.used_reads + estimate > PROJECT_DAILY_READS_CAP:
+            print(f"Sin cupo diario para exportar ({quota.used_reads} lecturas usadas hoy + ~{estimate}): "
+                  "se mantiene el catálogo publicado y se reintenta en la próxima corrida.")
+            if published is not None:
+                write_catalog(published, args.out)  # se vuelve a publicar el mismo
+            return 3 if published is None else 0
     catalog, stats = build_catalog(db, previous)
+    quota.record(stats["reads"] + 2, 0)
     size = write_catalog(catalog, args.out)
     gz = len(gzip.compress(args.out.read_bytes()))
     print(f"Catálogo {'incremental' if stats['incremental'] else 'completo'}: {stats['products']} productos, "
