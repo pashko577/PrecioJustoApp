@@ -33,6 +33,12 @@ def offer(title="Laptop X", identifiers=None, checked=None):
                         checked_at=checked or datetime(2026, 11, 23, tzinfo=timezone.utc))
 
 
+def test_run_budget_adds_the_store_own_listings_to_reads():
+    big = run_budget(0, 0, store_listings=7_200)
+    assert big.reads == RUN_MAX_READS + 7_200
+    assert run_budget(ENGINE_DAILY_READS - 4_000, 0, store_listings=7_200).reads == 4_000  # tope diario
+
+
 def test_unmatched_retry_is_spaced_unless_the_listing_changed():
     now = datetime(2026, 11, 23, tzinfo=timezone.utc)
     recent = {"title": "Laptop X", "identifiers": {}, "matchAttemptedAt": now - timedelta(days=1)}

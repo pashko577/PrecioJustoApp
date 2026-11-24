@@ -151,6 +151,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
         # Contarlas cuesta 1 lectura por cada 1000: si leerlas no cabe en el presupuesto, no se corre.
         count = int(query.count().get()[0][0].value)
         self.reads += 1 + count // 1000
+        self.quota.include_store_listings(count)
         if self.quota.budget.exhausted or count > self.quota.budget.reads - 1000:
             self.skipped_by_quota = True
             spider.not_due = True  # no se hacen solicitudes a la tienda
@@ -364,6 +365,11 @@ class FirestorePipeline(CrawlerAwarePipeline):
         stopped_early = getattr(spider, "stopped_early", False)
         complete_run = not stopped_early and getattr(spider, "max_pages", None) is None
 
+        if not stopped_early and self.counters["found"] == 0 and not errors:
+            # Sin productos ni error visible (cambio de diseño de la tienda, página vacía,
+            # bloqueo silencioso): se marca como falla para que se note en el resumen.
+            record_error(spider, "ERROR", "La corrida no encontró ningún producto: revisar la tienda o su extractor.")
+            errors = getattr(spider, "job_errors", [])
         self._flush()
         if complete_run and self.counters["saved"] > 0:
             self._mark_missing(spider.store_code)

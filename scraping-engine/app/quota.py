@@ -49,10 +49,15 @@ class RunBudget:
         return self.reads <= 0 or self.writes <= CLOSE_RESERVE_WRITES
 
 
-def run_budget(used_reads: int, used_writes: int) -> RunBudget:
-    """Tope de esta corrida según lo que ya se gastó hoy."""
+def run_budget(used_reads: int, used_writes: int, store_listings: int = 0) -> RunBudget:
+    """Tope de esta corrida según lo que ya se gastó hoy.
+
+    Leer las publicaciones de la propia tienda es inevitable (1 lectura cada una): se suman al
+    tope de lecturas. Si no, una tienda con muchas publicaciones (Plaza Vea) gastaría casi todo
+    su tope solo en leerlas y nunca completaría una corrida.
+    """
     return RunBudget(
-        reads=max(0, min(RUN_MAX_READS, ENGINE_DAILY_READS - used_reads)),
+        reads=max(0, min(RUN_MAX_READS + store_listings, ENGINE_DAILY_READS - used_reads)),
         writes=max(0, min(RUN_MAX_WRITES, ENGINE_DAILY_WRITES - used_writes)),
     )
 
@@ -68,6 +73,10 @@ class QuotaTracker:
         self.used_reads = int((data or {}).get("reads", 0))
         self.used_writes = int((data or {}).get("writes", 0))
         self.budget = run_budget(self.used_reads, self.used_writes)
+
+    def include_store_listings(self, count: int) -> None:
+        """Amplía el tope de lecturas con las publicaciones de la tienda (ver `run_budget`)."""
+        self.budget = run_budget(self.used_reads, self.used_writes, count)
 
     def record(self, reads: int, writes: int, deletes: int = 0) -> None:
         self.ref.set({
