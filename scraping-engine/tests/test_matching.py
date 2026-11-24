@@ -158,7 +158,9 @@ def test_enabled_spiders_and_registry_agree():
     from app.spiders.prestashop.registry import SPIDERS as PRESTASHOP
     from app.spiders.vtex.registry import SPIDERS as VTEX
     enabled = enabled_spiders()
-    assert {"coolbox", "efe", "lacuracao", "sercoplus", "memorykings"} <= set(enabled)
+    assert {"coolbox", "phantom", "sercoplus", "memorykings"} <= set(enabled)
+    # Efe y La Curacao responden 426 a GitHub Actions (bloqueo): desactivadas, sus extractores siguen.
+    assert not {"efe", "lacuracao"} & set(enabled) and {"efe", "lacuracao"} <= set(MAGENTO)
     # Toda tienda activa debe tener un extractor generado.
     assert set(enabled) <= set(VTEX) | set(MAGENTO) | set(PRESTASHOP) | set(MEMORYKINGS)
 
