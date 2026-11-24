@@ -23,5 +23,13 @@
     "providers": {
       "emailPassword": true
     }
+  },
+  "hosting": {
+    "public": "hosting/public",
+    "cleanUrls": true,
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ]
   }
 }
