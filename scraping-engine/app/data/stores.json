@@ -205,7 +205,7 @@
     "baseUrl": "https://www.efe.com.pe",
     "platform": "MAGENTO",
     "spider": "efe",
-    "scrapingEnabled": true,
+    "scrapingEnabled": false,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -213,7 +213,7 @@
       "robotsTxt": "Permite listados de categoría (.html y ?p=N). Bloquea /catalogsearch/, /search/, /catalog/, /checkout/, /customer/ y los parámetros product_list_*. La API /graphql no responde (no se usa).",
       "terms": "Términos y condiciones de Conecta Retail S.A. (Efe y La Curacao comparten documento). Regulan compras, garantías, promociones, sorteos y datos personales. Sin cláusulas sobre acceso automatizado, extracción, reproducción de contenidos ni propiedad intelectual.",
       "conclusion": "Viable con extracción responsable: listados de categoría, 1 solicitud a la vez, pausa de 6 s, sin parámetros bloqueados, detenerse ante 403/429/503 o desafío de Cloudflare (no se evade), cada 12 h. No mostrar fotos. Requiere revisión legal antes del lanzamiento comercial (13.3).",
-      "notes": "Monitores y microondas no aparecen en el menú; no se adivinan rutas."
+      "notes": "Monitores y microondas no aparecen en el menú; no se adivinan rutas. 24-11-2026: responde HTTP 426 a los servidores de GitHub Actions (bloqueo a centros de datos); desactivada, no se evade."
     },
     "categoryPaths": {
       "/tecnologia/computacion/laptops.html": "laptops",
@@ -229,7 +229,7 @@
     "baseUrl": "https://www.lacuracao.pe",
     "platform": "MAGENTO",
     "spider": "lacuracao",
-    "scrapingEnabled": true,
+    "scrapingEnabled": false,
     "scrapingIntervalMinutes": 1440,
     "freshnessMinutes": 2160,
     "review": {
@@ -237,7 +237,7 @@
       "robotsTxt": "Permite listados de categoría (.html y ?p=N). Bloquea /catalogsearch/, /search/, /catalog/, /checkout/, /customer/ y los parámetros product_list_*. La API /graphql no responde (no se usa).",
       "terms": "Términos y condiciones de Conecta Retail S.A. (Efe y La Curacao comparten documento). Regulan compras, garantías, promociones, sorteos y datos personales. Sin cláusulas sobre acceso automatizado, extracción, reproducción de contenidos ni propiedad intelectual.",
       "conclusion": "Viable con extracción responsable: listados de categoría, 1 solicitud a la vez, pausa de 6 s, sin parámetros bloqueados, detenerse ante 403/429/503 o desafío de Cloudflare (no se evade), cada 12 h. No mostrar fotos. Requiere revisión legal antes del lanzamiento comercial (13.3).",
-      "notes": "Monitores y microondas no aparecen en el menú; no se adivinan rutas."
+      "notes": "Monitores y microondas no aparecen en el menú; no se adivinan rutas. 24-11-2026: responde HTTP 426 a los servidores de GitHub Actions (bloqueo a centros de datos); desactivada, no se evade."
     },
     "categoryPaths": {
       "/tecnologia/computacion/laptops.html": "laptops",

@@ -135,8 +135,12 @@ jobs:
         working-directory: scraping-engine
         run: |
           pip install -r requirements.txt
-          python -m app.admin.review_matches recheck --prod --yes | tee recheck.txt
-          { echo "### Asociaciones enviadas a revisión"; echo '```'; head -100 recheck.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          set +e
+          python -m app.admin.review_matches recheck --prod --yes > recheck.txt 2>&1
+          code=$?
+          cat recheck.txt
+          { echo "### Asociaciones enviadas a revisión"; echo '```'; head -100 recheck.txt; tail -30 recheck.txt | grep -A30 -m1 Traceback; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
 
       - name: Resumen
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
@@ -144,9 +148,14 @@ jobs:
         run: |
           pip install -r requirements.txt
           set +e
-          python -m app.admin.status --markdown --prod --yes > estado.md
+          python -m app.admin.status --markdown --prod --yes > estado.md 2> estado.err
           code=$?
           cat estado.md >> "$GITHUB_STEP_SUMMARY"
+          if [ $code -ne 0 ] && [ $code -ne 2 ]; then
+            cat estado.err
+            { echo; echo '```'; tail -30 estado.err; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::El resumen del sistema falló (ver el error en el resumen)."
+          fi
           if [ $code -eq 2 ]; then echo "::warning::Hay tiendas desactualizadas (ver resumen)."; fi
           exit 0
 
