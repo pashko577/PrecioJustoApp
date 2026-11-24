@@ -48,3 +48,30 @@ def test_scope_pages_from_store_config():
     from app.spiders.vtex.registry import SPIDERS as VTEX
     assert VTEX["plazavea"].scope_pages == 4   # 200 productos por categoría
     assert MAGENTO["efe"].scope_pages == 6
+
+
+def test_pipeline_skips_store_when_project_quota_is_exhausted(monkeypatch):
+    """Un 429 al iniciar (cupo del proyecto agotado) salta la tienda sin fallar ni hacer solicitudes."""
+    from types import SimpleNamespace
+
+    import pytest
+    from google.api_core.exceptions import ResourceExhausted
+    from scrapy.exceptions import CloseSpider
+
+    from app.pipelines import firestore as pipeline_module
+
+    class ExhaustedDb:
+        def collection(self, _name):
+            raise ResourceExhausted("Quota exceeded.")
+
+    monkeypatch.setattr(pipeline_module, "get_db", lambda: ExhaustedDb())
+    monkeypatch.setattr(pipeline_module, "QuotaTracker", lambda db: SimpleNamespace(record=None))
+    logger = SimpleNamespace(warning=lambda *a, **k: None)
+    spider = SimpleNamespace(store_code="PLAZAVEA", logger=logger)
+    pipeline = pipeline_module.FirestorePipeline()
+    pipeline.crawler = SimpleNamespace(spider=spider)
+
+    with pytest.raises(CloseSpider):
+        pipeline.open_spider(spider)
+    assert spider.not_due is True
+    pipeline.close_spider(spider)  # no intenta registrar el uso (también fallaría)

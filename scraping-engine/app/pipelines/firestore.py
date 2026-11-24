@@ -113,12 +113,26 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.deletes = 0
         self.stopped_by_quota = False
         self.skipped_by_quota = False
+        self.quota_unavailable = False
         self.counters = {"found": 0, "saved": 0, "changed": 0, "matched": 0, "pending": 0, "unmatched": 0,
                          "gone": 0, "duplicates": 0, "written": 0, "unchanged": 0,
                          "possible_duplicates": 0}
 
     def open_spider(self, spider=None):
         spider = self.spider
+        try:
+            self._open(spider)
+        except ResourceExhausted:
+            # El cupo diario del proyecto ya se agotó (p. ej. antes de las 00:00 del Pacífico):
+            # se salta la tienda sin hacer solicitudes, en vez de fallar la corrida.
+            self.skipped_by_quota = True
+            self.quota_unavailable = True
+            spider.not_due = True
+            spider.logger.warning("%s: Firestore sin cupo diario (429). Se intenta en la próxima corrida.",
+                                  spider.store_code)
+            raise CloseSpider("quota_budget")
+
+    def _open(self, spider):
         self.db = get_db()
         store_code = spider.store_code
         self.started = datetime.now(timezone.utc)
@@ -316,7 +330,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
     def close_spider(self, spider=None):
         spider = self.spider
         if self.skipped_by_quota:
-            self.quota.record(self.reads, 0)
+            if not self.quota_unavailable:
+                self.quota.record(self.reads, 0)
             return
         if getattr(spider, "not_due", False):
             self.job_ref.delete()  # no se hizo ninguna solicitud: no se registra corrida
