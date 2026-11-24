@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../app/theme.dart';
+import '../core/image_url.dart';
 
 /// Foto del producto publicada por la tienda (`imageUrl`). Las fotos vienen sobre blanco:
 /// se funden con el fondo (`multiply`) para que no se vea un recuadro. Sin foto, o si no
@@ -23,12 +25,26 @@ class ProductImage extends StatelessWidget {
           ? placeholder
           : Padding(
               padding: EdgeInsets.all(padding),
-              child: Image.network(
-                url!,
-                fit: BoxFit.contain,
-                color: background,
-                colorBlendMode: BlendMode.multiply,
-                errorBuilder: (_, _, _) => placeholder,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Se pide la foto al tamaño en que se ve (y en WebP si la tienda lo permite),
+                  // se guarda en disco y se decodifica a ese tamaño: menos datos y menos memoria.
+                  final side = [constraints.maxWidth, constraints.maxHeight]
+                      .where((v) => v.isFinite)
+                      .fold<double>(0, (a, b) => a > b ? a : b);
+                  final px = imageBucket(side == 0 ? 160 : side, MediaQuery.devicePixelRatioOf(context));
+                  return CachedNetworkImage(
+                    imageUrl: sizedImageUrl(url!, px),
+                    httpHeaders: isVtexImage(url!) ? const {'Accept': 'image/webp,image/*'} : null,
+                    memCacheWidth: px,
+                    fit: BoxFit.contain,
+                    color: background,
+                    colorBlendMode: BlendMode.multiply,
+                    fadeInDuration: const Duration(milliseconds: 150),
+                    placeholder: (_, _) => const SizedBox.shrink(),
+                    errorWidget: (_, _, _) => placeholder,
+                  );
+                },
               ),
             ),
     );
