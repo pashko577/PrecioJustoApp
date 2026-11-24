@@ -387,7 +387,7 @@ No se garantizará una actualización inmediata de precios, porque depende de la
 | Páginas dinámicas | Playwright (solo si es indispensable) | Gratis |
 | Acceso del scraper a la BD | Firebase Admin SDK para Python | Gratis |
 | Ejecución programada | GitHub Actions (cron) | Gratis dentro de cuota |
-| Imágenes | Enlace a la imagen de la tienda (sin almacenamiento propio) | Gratis |
+| Imágenes | Enlace a la imagen de la tienda (sin almacenamiento propio), solo de tiendas con permiso (`showImages`, ver 13.4) | Gratis |
 | Entorno local | Firebase Emulator Suite | Gratis |
 | Control de versiones | Git + GitHub | Gratis |
 | CI | GitHub Actions | Gratis dentro de cuota |
@@ -1272,6 +1272,26 @@ En Perú se debe considerar la **Ley N.° 29733** y su Reglamento aprobado por e
 La viabilidad jurídica y contractual deberá evaluarse individualmente para cada tienda antes de su incorporación comercial.
 
 ---
+
+### 13.4. Fotos de productos (revisión preliminar del 24-11-2026)
+
+No es asesoría legal: debe confirmarla un abogado antes del lanzamiento comercial.
+
+- **Términos de las tiendas activas:** ninguno prohíbe expresamente usar sus fotos. Nueve no tienen
+  cláusulas de propiedad intelectual; Coolbox llama a sus fotos «referenciales»; Memory Kings no
+  publica términos; Shopstar (sección 9) prohíbe en términos amplios el «aprovechamiento indebido»
+  de la plataforma (el caso de mayor riesgo). Que no se prohíba no equivale a tener permiso.
+- **Ley (D. Leg. 822, derecho de autor):** las fotografías están protegidas aunque sean de producto;
+  su titular es la tienda o, a menudo, la marca. Perú tiene una lista cerrada de excepciones, sin un
+  «uso justo» amplio, y un comparador de precios no encaja claramente en ninguna. Enlazar la foto
+  sin copiarla reduce el riesgo, pero no lo elimina. Además, consume ancho de banda de la tienda.
+- **Decisión:** las fotos de una tienda solo se muestran con `showImages: true` en `stores.json`,
+  que se activa únicamente con permiso escrito o licencia (por ejemplo, un programa de afiliados).
+  Por defecto está desactivado en todas. El motor sigue guardando el enlace en `storeProducts`
+  (no se muestra), así que activar una tienda no requiere volver a extraer nada.
+- **Cómo se aplica:** el resumen de cada producto solo toma fotos de tiendas permitidas
+  (`imageStoreCode`). `python -m app.admin.images`, que el workflow corre en cada ejecución, retira
+  las fotos no permitidas que ya estaban guardadas. La app muestra el ícono de la categoría.
 
 ## 14. Costos y límites del plan gratuito
 

@@ -42,7 +42,7 @@ def test_new_product_costs_two_writes_and_history_starts_on_first_change(db):
     product = db.document(f"products/{listing['productId']}").get().to_dict()
     assert product["summary"]["minPriceCents"] == 200_000
     assert product["summary"]["offerCount"] == 1
-    assert product["imageUrl"] == "https://example.com/ps5.jpg"
+    assert product.get("imageUrl") is None  # Coolbox no dio permiso para sus fotos (showImages)
 
     second = datetime.now(timezone.utc)
     _run(_offer(180_000, second))
@@ -52,3 +52,20 @@ def test_new_product_costs_two_writes_and_history_starts_on_first_change(db):
     assert db.document("storeProducts/COOLBOX__1").get().to_dict()["historyStarted"] is True
     product = db.document(f"products/{listing['productId']}").get().to_dict()
     assert product["summary"]["minPriceCents"] == 180_000
+
+
+def test_clear_disallowed_images_keeps_only_permitted_stores(db):
+    from app.admin.images import clear_disallowed_images
+
+    db.document("stores/COOLBOX").set({"name": "Coolbox", "showImages": False})
+    db.document("stores/OECHSLE").set({"name": "Oechsle", "showImages": True})
+    db.document("products/a").set({"imageUrl": "https://a.jpg"})  # antiguo, sin tienda registrada
+    db.document("products/b").set({"imageUrl": "https://b.jpg", "imageStoreCode": "COOLBOX"})
+    db.document("products/c").set({"imageUrl": "https://c.jpg", "imageStoreCode": "OECHSLE"})
+    db.document("products/d").set({"displayName": "sin foto"})
+
+    assert clear_disallowed_images(db) == 2
+    assert "imageUrl" not in db.document("products/a").get().to_dict()
+    assert "imageUrl" not in db.document("products/b").get().to_dict()
+    assert db.document("products/c").get().to_dict()["imageUrl"] == "https://c.jpg"
+    assert clear_disallowed_images(db) == 0  # idempotente

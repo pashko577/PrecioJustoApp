@@ -63,6 +63,8 @@ def store_document(store: dict) -> dict:
         "countryCode": "PE",
         "status": "ACTIVE" if store.get("scrapingEnabled") else "UNDER_REVIEW",
         "scrapingEnabled": bool(store.get("scrapingEnabled")),
+        # Fotos de la tienda: solo con permiso o licencia (afiliados). Ver COMPRA_MEJOR.md, 13.4.
+        "showImages": bool(store.get("showImages")),
         "scrapingIntervalMinutes": store.get("scrapingIntervalMinutes", 360),
         "freshnessMinutes": store.get("freshnessMinutes", 720),
         "termsReviewedAt": reviewed,

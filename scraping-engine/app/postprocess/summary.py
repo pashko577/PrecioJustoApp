@@ -100,19 +100,26 @@ def compute_summary(offers: list[dict], stores: dict[str, dict], now: datetime |
     }
 
 
-def product_image(offers: list[dict]) -> str | None:
-    """Foto del producto: la de su oferta confirmada más antigua que tenga foto.
+def allowed_image_stores(stores: dict[str, dict]) -> set[str]:
+    """Tiendas cuyas fotos se pueden mostrar (`showImages`: permiso o licencia de la tienda)."""
+    return {code for code, s in stores.items() if s.get("showImages")}
 
-    Estable entre corridas (no cambia de tienda en tienda) y completa los productos creados
-    antes de que su tienda publicara fotos, sin lecturas extra.
+
+def product_image(offers: list[dict], allowed_stores: set[str]) -> dict | None:
+    """Foto del producto: la de su oferta confirmada más antigua, de una tienda que lo permite.
+
+    Devuelve `{"imageUrl", "imageStoreCode"}`. Estable entre corridas (no cambia de tienda en
+    tienda), sin lecturas extra. Las fotos son de las tiendas o de las marcas (derecho de autor,
+    D. Leg. 822): sin permiso de la tienda no se muestran.
     """
     with_image = [o for o in offers if o.get("imageUrl") and o.get("status", "ACTIVE") == "ACTIVE"
+                  and o.get("storeCode") in allowed_stores
                   and o.get("matchStatus", "MATCHED_AUTO") in SHOWN_MATCH_STATUSES]
     if not with_image:
         return None
     far_future = datetime.max.replace(tzinfo=timezone.utc)
     oldest = min(with_image, key=lambda o: (o.get("createdAt") or far_future, o.get("storeCode") or ""))
-    return oldest["imageUrl"]
+    return {"imageUrl": oldest["imageUrl"], "imageStoreCode": oldest.get("storeCode")}
 
 
 def store_info(db) -> dict[str, dict]:
@@ -124,15 +131,16 @@ def refresh_summaries(db, product_ids: set[str]) -> int:
     if not product_ids:
         return 0
     stores = store_info(db)
+    allowed = allowed_image_stores(stores)
     batch, pending, updated = db.batch(), 0, 0
     for pid in sorted(product_ids):
         offers = [
             s.to_dict() for s in db.collection("storeProducts").where(filter=FieldFilter("productId", "==", pid)).stream()
         ]
         data = {"summary": compute_summary(offers, stores), "updatedAt": firestore.SERVER_TIMESTAMP}
-        image = product_image(offers)
-        if image:  # sin foto no se borra la que ya tenga el producto
-            data["imageUrl"] = image
+        # Sin foto permitida se borra la que tuviera (por ejemplo, si la tienda retiró el permiso).
+        data.update(product_image(offers, allowed)
+                    or {"imageUrl": firestore.DELETE_FIELD, "imageStoreCode": firestore.DELETE_FIELD})
         # set+merge: no falla si el producto ya no existe (un update haría fallar todo el lote).
         batch.set(db.collection("products").document(pid), data, merge=True)
         pending += 1

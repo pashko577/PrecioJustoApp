@@ -63,6 +63,7 @@ jobs:
           pip install -r requirements.txt
           python -m app.admin.categories --prod --yes
           python -m app.admin.stores --prod --yes
+          python -m app.admin.images --prod --yes
 
   scrape:
     name: Scraping ${{ matrix.spider }}

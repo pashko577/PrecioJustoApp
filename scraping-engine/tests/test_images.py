@@ -42,15 +42,22 @@ def offer(store, image, days_old, **extra):
 
 def test_product_image_is_the_oldest_confirmed_offer_with_photo():
     offers = [offer("B", "https://b/new.jpg", 1), offer("A", "https://a/old.jpg", 30), offer("C", None, 90)]
-    assert product_image(offers) == "https://a/old.jpg"
+    assert product_image(offers, {"A", "B", "C"})["imageUrl"] == "https://a/old.jpg"
+    assert product_image(offers, {"A", "B", "C"})["imageStoreCode"] == "A"
+
+
+def test_product_image_only_from_stores_that_allow_it():
+    offers = [offer("B", "https://b/new.jpg", 1), offer("A", "https://a/old.jpg", 30)]
+    assert product_image(offers, {"B"})["imageUrl"] == "https://b/new.jpg"
+    assert product_image(offers, set()) is None  # sin permiso de ninguna tienda: sin foto
 
 
 def test_product_image_ignores_unconfirmed_or_inactive_offers():
     offers = [offer("A", "https://a.jpg", 30, matchStatus="PENDING_REVIEW"),
               offer("B", "https://b.jpg", 20, status="INACTIVE"),
               offer("C", "https://c.jpg", 1)]
-    assert product_image(offers) == "https://c.jpg"
-    assert product_image([offer("A", None, 3)]) is None
+    assert product_image(offers, {"A", "B", "C"})["imageUrl"] == "https://c.jpg"
+    assert product_image([offer("A", None, 3)], {"A"}) is None
 
 
 def test_offer_is_rewritten_once_when_it_gains_a_photo():

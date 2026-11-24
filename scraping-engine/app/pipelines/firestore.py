@@ -301,8 +301,9 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.pending_writes += 2 if history else 1
         if created:
             created["summary"] = compute_summary([data], {item.store_code: self.store_doc}, item.checked_at)
-            if image := product_image([data]):
-                created["imageUrl"] = image
+            allowed = {item.store_code} if self.store_doc.get("showImages") else set()
+            if image := product_image([data], allowed):
+                created.update(image)
             batch.set(self.db.collection("products").document(decision.product_id), created)
             self.pending_writes += 1
             # Se guarda ya: otra publicación de esta corrida puede asociarse y completar sus códigos.
