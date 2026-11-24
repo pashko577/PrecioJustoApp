@@ -1,0 +1,212 @@
+"""Catálogo público en un archivo (`catalog.json`) para la app: 0 lecturas de Firestore por usuario.
+
+La app descarga este archivo (publicado en GitHub Pages) una vez cada pocas horas, lo guarda en
+el celular y navega, busca y compara desde ahí. Firestore queda solo para los datos de cada
+cuenta (favoritos, listas, alertas) y el historial de precios.
+
+Exportación incremental: parte del catálogo publicado y solo lee de Firestore los productos y
+las publicaciones con `updatedAt` posterior a esa versión (más un margen). Sin catálogo previo, o
+con `--full` (una vez por semana), lo arma completo.
+
+Uso:
+    python -m app.export.catalog --out dist/catalog.json --previous-url https://.../catalog.json
+    python -m app.export.catalog --out dist/catalog.json --full --prod --yes
+"""
+
+from __future__ import annotations
+
+import argparse
+import gzip
+import json
+import sys
+import urllib.request
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from google.cloud.firestore_v1.base_query import FieldFilter
+
+from app.admin.target import add_target_args, resolve_db
+from app.catalog import flatten_categories
+from app.postprocess.summary import SHOWN_MATCH_STATUSES
+
+FORMAT_VERSION = 1
+# Margen ante relojes desfasados y escrituras en curso durante la exportación anterior.
+INCREMENTAL_MARGIN = timedelta(minutes=30)
+SUMMARY_FIELDS = ("minPriceCents", "minPriceStoreCode", "maxPriceCents", "sortPriceCents", "offerCount",
+                  "verifiedOfferCount", "lastCheckedAt", "currency", "priceDropFromCents", "priceDropPercent",
+                  "priceDroppedAt")
+
+
+def _iso(value):
+    """Fechas como texto ISO en UTC; el resto igual."""
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return value
+
+
+def _compact(d: dict) -> dict:
+    """Sin campos vacíos: el archivo pesa menos y la app trata «ausente» como «nulo»."""
+    return {k: _iso(v) for k, v in d.items() if v not in (None, "", [], {})}
+
+
+def product_entry(pid: str, d: dict) -> dict | None:
+    status = d.get("status", "ACTIVE")
+    if status == "MERGED" and d.get("mergedInto"):
+        return {"id": pid, "status": "MERGED", "mergedInto": d["mergedInto"]}  # para redirigir enlaces
+    if status != "ACTIVE":
+        return None
+    summary = d.get("summary") or {}
+    return _compact({
+        "id": pid,
+        "name": d.get("displayName") or d.get("normalizedName") or pid,
+        "brand": d.get("brand"),
+        "categorySlug": d.get("categorySlug"),
+        "model": d.get("model"),
+        "imageUrl": d.get("imageUrl"),
+        "identifiers": d.get("identifiers"),
+        "summary": _compact({k: summary.get(k) for k in SUMMARY_FIELDS}),
+    })
+
+
+def offer_entry(oid: str, d: dict) -> dict | None:
+    """Solo publicaciones vigentes con asociación confirmada (las que la app muestra)."""
+    if (d.get("status", "ACTIVE") != "ACTIVE" or not d.get("productId")
+            or d.get("matchStatus", "MATCHED_AUTO") not in SHOWN_MATCH_STATUSES):
+        return None
+    return _compact({
+        "id": oid,
+        "productId": d["productId"],
+        "storeCode": d.get("storeCode"),
+        "storeName": d.get("storeName"),
+        "title": d.get("title"),
+        "productUrl": d.get("productUrl"),
+        "priceCents": d.get("currentPriceCents"),
+        "previousPriceCents": d.get("previousPriceCents"),
+        "shippingCents": d.get("currentShippingCents"),
+        "availability": d.get("availability"),
+        "currency": d.get("currency"),
+        "sellerName": d.get("sellerName"),
+        "lastCheckedAt": d.get("lastCheckedAt"),
+        "lastChangedAt": d.get("lastChangedAt"),
+        "missedRuns": d.get("missedRuns") or None,
+    })
+
+
+def store_entry(code: str, d: dict) -> dict:
+    return _compact({
+        "code": code,
+        "name": d.get("name"),
+        "freshnessMinutes": d.get("freshnessMinutes"),
+        "lastCompleteRunAt": d.get("lastCompleteRunAt"),
+        "active": bool(d.get("scrapingEnabled", True)),
+    })
+
+
+def load_previous(url: str | None, path: Path | None = None) -> dict | None:
+    """Catálogo publicado (None si no existe o no es de este formato)."""
+    try:
+        if path and path.exists():
+            raw = path.read_bytes()
+        elif url:
+            req = urllib.request.Request(url, headers={"User-Agent": "CompraMejorExport/1.0",
+                                                       "Accept-Encoding": "gzip"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                raw = resp.read()
+                if resp.headers.get("Content-Encoding") == "gzip":
+                    raw = gzip.decompress(raw)
+        else:
+            return None
+        data = json.loads(raw)
+    except Exception as exc:  # primera vez, sitio caído o archivo dañado: exportación completa
+        print(f"Sin catálogo previo utilizable ({type(exc).__name__}): se exporta completo.")
+        return None
+    return data if data.get("version") == FORMAT_VERSION else None
+
+
+def _changed(db, collection: str, since: datetime | None):
+    query = db.collection(collection)
+    if since is not None:
+        query = query.where(filter=FieldFilter("updatedAt", ">", since))
+    return query.stream()
+
+
+def build_catalog(db, previous: dict | None, now: datetime | None = None) -> tuple[dict, dict]:
+    """Devuelve `(catálogo, estadísticas)`. Con `previous`, solo lee lo que cambió."""
+    now = now or datetime.now(timezone.utc)
+    since = None
+    products: dict[str, dict] = {}
+    offers: dict[str, dict] = {}
+    if previous:
+        since = datetime.fromisoformat(previous["generatedAt"].replace("Z", "+00:00")) - INCREMENTAL_MARGIN
+        products = {p["id"]: p for p in previous.get("products", [])}
+        offers = {o["id"]: o for o in previous.get("offers", [])}
+
+    reads = 0
+    for snap in _changed(db, "products", since):
+        reads += 1
+        entry = product_entry(snap.id, snap.to_dict() or {})
+        if entry:
+            products[snap.id] = entry
+        else:
+            products.pop(snap.id, None)
+    for snap in _changed(db, "storeProducts", since):
+        reads += 1
+        entry = offer_entry(snap.id, snap.to_dict() or {})
+        if entry:
+            offers[snap.id] = entry
+        else:
+            offers.pop(snap.id, None)
+    stores = {}
+    for snap in db.collection("stores").stream():
+        reads += 1
+        stores[snap.id] = store_entry(snap.id, snap.to_dict() or {})
+
+    # Ofertas de productos que ya no se muestran (unificados o retirados) no sirven a la app.
+    active_ids = {pid for pid, p in products.items() if p.get("status", "ACTIVE") == "ACTIVE"}
+    offers = {oid: o for oid, o in offers.items() if o["productId"] in active_ids}
+
+    categories = [_compact({k: c.get(k) for k in ("slug", "name", "parentSlug", "order", "icon")})
+                  for c in flatten_categories() if c.get("status", "ACTIVE") == "ACTIVE"]
+    catalog = {
+        "version": FORMAT_VERSION,
+        "generatedAt": _iso(now),
+        "categories": categories,
+        "stores": [stores[c] for c in sorted(stores)],
+        "products": [products[p] for p in sorted(products)],
+        "offers": [offers[o] for o in sorted(offers)],
+    }
+    stats = {"incremental": since is not None, "reads": max(reads, 1), "products": len(active_ids),
+             "offers": len(offers)}
+    return catalog, stats
+
+
+def write_catalog(catalog: dict, out: Path) -> int:
+    out.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    out.write_bytes(data)
+    return len(data)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_target_args(parser)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--previous-url", help="URL del catálogo publicado (exportación incremental).")
+    parser.add_argument("--previous-file", type=Path, help="Catálogo previo local (pruebas).")
+    parser.add_argument("--full", action="store_true", help="Ignorar el catálogo previo y leer todo.")
+    args = parser.parse_args(argv)
+    db = resolve_db(args)
+    previous = None if args.full else load_previous(args.previous_url, args.previous_file)
+    catalog, stats = build_catalog(db, previous)
+    size = write_catalog(catalog, args.out)
+    gz = len(gzip.compress(args.out.read_bytes()))
+    print(f"Catálogo {'incremental' if stats['incremental'] else 'completo'}: {stats['products']} productos, "
+          f"{stats['offers']} ofertas, {stats['reads']} lecturas de Firestore, "
+          f"{size / 1024:.0f} KB ({gz / 1024:.0f} KB comprimido)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -44,7 +44,8 @@ def clear_disallowed_images(db) -> int:
         if store in allowed or (store is None and keep_unknown):
             continue
         batch.update(snap.reference, {"imageUrl": firestore.DELETE_FIELD,
-                                      "imageStoreCode": firestore.DELETE_FIELD})
+                                      "imageStoreCode": firestore.DELETE_FIELD,
+                                      "updatedAt": firestore.SERVER_TIMESTAMP})  # lo ve el catálogo
         pending += 1
         cleared += 1
         if pending >= 400:

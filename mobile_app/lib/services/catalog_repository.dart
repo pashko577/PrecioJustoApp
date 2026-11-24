@@ -5,6 +5,7 @@ import '../core/offer_rules.dart';
 import '../core/price_history.dart';
 import '../core/search_normalizer.dart';
 import '../models/models.dart';
+import 'local_catalog.dart';
 
 /// Una página del catálogo y el cursor para pedir la siguiente.
 class ProductPage {
@@ -15,16 +16,30 @@ class ProductPage {
   });
 
   final List<Product> items;
-  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+
+  /// Documento de Firestore o posición en el catálogo local: se devuelve tal cual en la siguiente.
+  final Object? cursor;
   final bool hasMore;
 }
 
 /// Acceso de solo lectura al catálogo público (COMPRA_MEJOR.md, sección 11.1).
-/// Todas las consultas usan `limit` y lecturas puntuales (`get`) para cuidar la cuota gratuita.
+///
+/// Primero usa el catálogo local (`catalog.json` guardado en el celular: 0 lecturas de
+/// Firestore). Si no está disponible, consulta Firestore con `limit` y lecturas puntuales.
 class CatalogRepository {
-  CatalogRepository(this._db);
+  CatalogRepository(this._db, {CatalogCache? local}) : _local = local; // ignore: prefer_initializing_formals
 
   final FirebaseFirestore _db;
+  final CatalogCache? _local;
+
+  /// Catálogo local, o `null` para usar Firestore (sin caché configurada o sin descarga posible).
+  Future<LocalCatalog?> _catalog() async {
+    try {
+      return await _local?.get();
+    } catch (_) {
+      return null;
+    }
+  }
 
   static const pageSize = 20;
   static const searchLimit = 40;
@@ -33,6 +48,8 @@ class CatalogRepository {
       _db.collection('products');
 
   Future<List<Category>> categories() async {
+    final local = await _catalog();
+    if (local != null && local.categories.isNotEmpty) return local.categories;
     final snap = await _db
         .collection('categories')
         .where('status', isEqualTo: 'ACTIVE')
@@ -45,9 +62,14 @@ class CatalogRepository {
   /// gracias a `summary.sortPriceCents`). Filtra por categorías (máx. 30, límite de `whereIn`).
   Future<ProductPage> productsPage({
     List<String>? categorySlugs,
-    DocumentSnapshot<Map<String, dynamic>>? startAfter,
+    Object? startAfter,
     int limit = pageSize,
   }) async {
+    final local = await _catalog();
+    if (local != null && (startAfter == null || startAfter is int)) {
+      final page = local.page(categorySlugs: categorySlugs, offset: (startAfter as int?) ?? 0, limit: limit);
+      return ProductPage(items: page.items, cursor: page.next, hasMore: page.hasMore);
+    }
     Query<Map<String, dynamic>> query = _products.where(
       'status',
       isEqualTo: 'ACTIVE',
@@ -59,7 +81,7 @@ class CatalogRepository {
       );
     }
     query = query.orderBy('summary.sortPriceCents');
-    if (startAfter != null) query = query.startAfterDocument(startAfter);
+    if (startAfter is DocumentSnapshot) query = query.startAfterDocument(startAfter);
 
     // Se pide uno extra para saber si hay otra página sin hacer otra consulta.
     final snap = await query.limit(limit + 1).get();
@@ -80,6 +102,8 @@ class CatalogRepository {
   Future<List<Product>> search(String raw) async {
     final query = SearchQuery.parse(raw);
     if (query.isEmpty) return const [];
+    final local = await _catalog();
+    if (local != null) return local.search(query)..sort(compareByPrice);
 
     if (query.barcode != null) {
       final code = query.barcode!; // canónico (13 dígitos), ver canonicalGtin
@@ -109,6 +133,8 @@ class CatalogRepository {
   /// Productos cuyo mejor precio bajó hace poco, de mayor a menor bajada (banner de Inicio).
   /// Una sola consulta con `limit`: unas pocas lecturas por visita.
   Future<List<Product>> priceDrops({int limit = 8}) async {
+    final local = await _catalog();
+    if (local != null) return local.priceDrops(limit: limit);
     final snap = await _products
         .where('status', isEqualTo: 'ACTIVE')
         .where('summary.priceDropPercent', isGreaterThan: 0)
@@ -119,11 +145,16 @@ class CatalogRepository {
   }
 
   Future<Product?> product(String id) async {
+    // Un producto creado después de la última publicación del catálogo se busca en Firestore.
+    final cached = (await _catalog())?.product(id);
+    if (cached != null) return cached;
     final doc = await _products.doc(id).get();
     return doc.exists ? Product.fromDoc(doc) : null;
   }
 
   Future<List<StoreOffer>> offers(String productId) async {
+    final local = await _catalog();
+    if (local != null && local.product(productId) != null) return local.offers(productId);
     final snap = await _db
         .collection('storeProducts')
         .where('productId', isEqualTo: productId)
@@ -178,6 +209,8 @@ class CatalogRepository {
 
   /// Vigencia y última corrida completa por tienda. Pocas tiendas: una sola lectura de la colección.
   Future<Map<String, StoreInfo>> stores() async {
+    final local = await _catalog();
+    if (local != null && local.stores.isNotEmpty) return local.stores;
     final snap = await _db.collection('stores').get();
     return {for (final d in snap.docs) d.id: StoreInfo.fromDoc(d)};
   }
@@ -193,8 +226,11 @@ int compareByPrice(Product a, Product b) {
   return byPrice != 0 ? byPrice : a.name.compareTo(b.name);
 }
 
+/// Catálogo local compartido por toda la app (una sola copia en memoria).
+final catalogCacheProvider = Provider<CatalogCache?>((ref) => CatalogCache());
+
 final catalogRepositoryProvider = Provider<CatalogRepository>(
-  (ref) => CatalogRepository(FirebaseFirestore.instance),
+  (ref) => CatalogRepository(FirebaseFirestore.instance, local: ref.watch(catalogCacheProvider)),
 );
 
 final categoriesProvider = FutureProvider<List<Category>>(
@@ -255,7 +291,7 @@ class CatalogFeed {
 
   final List<Product> items;
   final bool hasMore;
-  final DocumentSnapshot<Map<String, dynamic>>? cursor;
+  final Object? cursor;
   final bool loadingMore;
 
   CatalogFeed copyWith({bool? loadingMore}) => CatalogFeed(

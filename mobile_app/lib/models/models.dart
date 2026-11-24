@@ -1,6 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-DateTime? _date(Object? value) => value is Timestamp ? value.toDate() : null;
+/// Fechas de Firestore (`Timestamp`) o del catálogo local (texto ISO en UTC).
+DateTime? _date(Object? value) => switch (value) {
+  Timestamp t => t.toDate(),
+  String s => DateTime.tryParse(s),
+  _ => null,
+};
 int? _int(Object? value) => value is num ? value.toInt() : null;
 
 class Category {
@@ -21,6 +26,15 @@ class Category {
   final String? icon;
 
   bool get isTopLevel => parentSlug == null;
+
+  /// Entrada de `catalog.json` (ver `app/export/catalog.py` en el motor).
+  factory Category.fromCatalog(Map<String, dynamic> d) => Category(
+    slug: d['slug'] as String,
+    name: d['name'] as String? ?? d['slug'] as String,
+    parentSlug: d['parentSlug'] as String?,
+    order: _int(d['order']) ?? 0,
+    icon: d['icon'] as String?,
+  );
 
   factory Category.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
@@ -128,6 +142,23 @@ class Product {
   final String? mergedInto;
   final PriceSummary summary;
 
+  /// Entrada de `catalog.json`: sin `searchTokens` (la búsqueda local los calcula).
+  factory Product.fromCatalog(Map<String, dynamic> d) => Product(
+    id: d['id'] as String,
+    name: d['name'] as String? ?? d['id'] as String,
+    brand: d['brand'] as String? ?? '',
+    categorySlug: d['categorySlug'] as String? ?? '',
+    model: d['model'] as String?,
+    imageUrl: d['imageUrl'] as String?,
+    identifiers: {
+      for (final e in (d['identifiers'] as Map? ?? const {}).entries)
+        e.key.toString(): List<String>.from(e.value as List? ?? const []),
+    },
+    status: d['status'] as String? ?? 'ACTIVE',
+    mergedInto: d['mergedInto'] as String?,
+    summary: PriceSummary.fromMap((d['summary'] as Map?)?.cast<String, dynamic>()),
+  );
+
   factory Product.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return Product(
@@ -221,6 +252,24 @@ class StoreOffer {
     lastChangedAt: lastChangedAt,
   );
 
+  /// Entrada de `catalog.json`.
+  factory StoreOffer.fromCatalog(Map<String, dynamic> d) => StoreOffer(
+    id: d['id'] as String,
+    storeCode: d['storeCode'] as String? ?? '',
+    storeName: d['storeName'] as String? ?? '',
+    title: d['title'] as String? ?? '',
+    productUrl: d['productUrl'] as String? ?? '',
+    priceCents: _int(d['priceCents']) ?? 0,
+    previousPriceCents: _int(d['previousPriceCents']),
+    shippingCents: _int(d['shippingCents']),
+    availability: parseAvailability(d['availability'] as String?),
+    lastCheckedAt: _date(d['lastCheckedAt']) ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+    sellerName: d['sellerName'] as String?,
+    currency: d['currency'] as String? ?? 'PEN',
+    missedRuns: _int(d['missedRuns']) ?? 0,
+    lastChangedAt: _date(d['lastChangedAt']),
+  );
+
   factory StoreOffer.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};
     return StoreOffer(
@@ -263,6 +312,15 @@ class StoreInfo {
 
   /// `false` = tienda evaluada pero que no se consulta (no se muestra como «comparada»).
   final bool active;
+
+  /// Entrada de `catalog.json`.
+  factory StoreInfo.fromCatalog(Map<String, dynamic> d) => StoreInfo(
+    code: d['code'] as String,
+    name: d['name'] as String? ?? d['code'] as String,
+    freshnessMinutes: _int(d['freshnessMinutes']) ?? 720,
+    lastCompleteRunAt: _date(d['lastCompleteRunAt']),
+    active: d['active'] as bool? ?? true,
+  );
 
   factory StoreInfo.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const {};

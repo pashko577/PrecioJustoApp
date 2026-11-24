@@ -1355,6 +1355,29 @@ Pacífico (03:00 en Lima). Medidas:
 
 La primera carga de las 13 tiendas toma unos 2 días: cada corrida avanza hasta su tope y la siguiente continúa.
 
+### 14.3.1. Catálogo local en el celular (24-11-2026)
+
+Con Firestore, cada visita a la app costaba unas 100 a 150 lecturas (inicio, categorías, tiendas,
+producto, ofertas). Con la reserva que deja el motor alcanzaba para unas 100 visitas al día, y el
+24-11 el cupo se agotó con muy pocos usuarios.
+
+- **Publicación:** al terminar cada corrida, el job «Publicar catálogo de la app» ejecuta
+  `python -m app.export.catalog`, que genera `catalog.json` (productos activos, ofertas
+  confirmadas, tiendas y categorías) y lo publica en GitHub Pages:
+  `https://pashko577.github.io/PrecioJustoApp/catalog.json`. GitHub Pages lo sirve comprimido.
+- **Exportación incremental:** parte del catálogo publicado y solo lee de Firestore los documentos
+  con `updatedAt` posterior (con 30 min de margen). Normalmente son cientos de lecturas por día.
+  Los domingos (corrida de las 06:15 UTC), o a pedido con `catalogo_completo`, se rearma completo.
+- **App:** `CatalogCache` guarda el archivo en el celular, lo usa al abrir (instantáneo y sin
+  internet) y pide uno nuevo cada 2 horas o al deslizar para actualizar (`If-None-Match`: 304
+  si no cambió). Navegar, buscar, comparar y ver bajadas no lee Firestore. La búsqueda local usa
+  la misma normalización que la de Firestore.
+- **Sigue en Firestore:** la cuenta y sus datos (favoritos, listas, alertas, notificaciones), el
+  historial de precios (solo al abrir el gráfico) y un producto creado después de la última
+  publicación. Si el catálogo no se puede descargar ni hay copia guardada, la app vuelve a
+  consultar Firestore como antes.
+- **Requisito:** GitHub Pages activado en el repositorio con fuente «GitHub Actions».
+
 ### 14.4. Presupuesto diario estimado del MVP
 
 Supuestos: 2 tiendas, 500 publicaciones, 4 corridas por día, 100 usuarios activos.

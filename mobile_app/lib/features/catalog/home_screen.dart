@@ -33,6 +33,8 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
+          // Pide el catálogo más reciente (si no cambió, el servidor responde 304 sin reenviarlo).
+          await ref.read(catalogCacheProvider)?.refresh();
           ref.invalidate(categoriesProvider);
           ref.invalidate(storesProvider);
           ref.invalidate(priceDropsProvider);
