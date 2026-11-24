@@ -111,13 +111,35 @@ jobs:
         working-directory: scraping-engine
         run: pip install -r requirements.txt
 
+      # Copia de trabajo del motor (app/state.py): evita releer productos y publicaciones.
+      # Sin copia (primera vez o vencida), el motor lee Firestore como antes.
+      - name: Restaurar copia de trabajo
+        if: steps.creds.outputs.ready == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: engine-state
+          key: engine-state-${{ github.run_id }}
+          restore-keys: engine-state-
+
       - name: Ejecutar spider
         if: steps.creds.outputs.ready == 'true'
         working-directory: scraping-engine
+        env:
+          ENGINE_STATE: ${{ github.workspace }}/engine-state/engine-state.json.gz
+          ENGINE_STATE_OUT: ${{ github.workspace }}/state-out
         run: |
           ARGS=""
           if [ -n "$MAX_PAGES" ]; then ARGS="-a max_pages=$MAX_PAGES"; fi
           scrapy crawl ${{ matrix.spider }} $ARGS -L INFO
+
+      - name: Guardar publicaciones finales de la tienda
+        if: always() && steps.creds.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-${{ matrix.spider }}
+          path: state-out/
+          if-no-files-found: ignore
+          retention-days: 1
 
   status:
     name: Estado del sistema
@@ -197,17 +219,39 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: scraping-engine/requirements.txt
+      - name: Restaurar copia de trabajo
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        uses: actions/cache/restore@v4
+        with:
+          path: engine-state
+          key: engine-state-${{ github.run_id }}
+          restore-keys: engine-state-
+      - name: Publicaciones finales de cada tienda
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        continue-on-error: true   # sin tiendas en esta corrida no hay artefactos
+        uses: actions/download-artifact@v4
+        with:
+          pattern: state-*
+          path: state-out
+          merge-multiple: true
       - name: Exportar catálogo
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
         working-directory: scraping-engine
         run: |
           pip install -r requirements.txt
+          rm -f ../engine-state/.updated
           FULL=""
           if [ "${{ github.event.inputs.catalogo_completo }}" = "true" ]; then FULL="--full"; fi
           if [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "12" ]; then FULL="--full"; fi
-          python -m app.export.catalog --prod --yes $FULL --out ../site/catalog.json             --previous-url "$CATALOG_URL" | tee export.txt
+          python -m app.export.catalog --prod --yes $FULL --out ../site/catalog.json --previous-url "$CATALOG_URL" --state ../engine-state/engine-state.json.gz --store-states ../state-out | tee export.txt
           touch ../site/.nojekyll
           { echo "### Catálogo de la app"; cat export.txt; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Guardar copia de trabajo
+        if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('engine-state/.updated') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: engine-state
+          key: engine-state-${{ github.run_id }}
       - uses: actions/upload-pages-artifact@v4
         if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('site/catalog.json') != ''
         with:

@@ -68,6 +68,17 @@ class ProductMatcher:
         self._missing_keys: set[str] = set()  # identificadores ya buscados sin resultado
         self.created_docs: dict[str, dict] = {}  # productos nuevos aún sin guardar
 
+    def preload(self, products: dict[str, dict]) -> None:
+        """Carga todos los productos desde la copia de trabajo: `_load_category` ya no lee Firestore."""
+        self._by_category = {slug: {} for slug in self.valid_categories}
+        for pid, data in products.items():
+            slug = data.get("categorySlug", "")
+            self._by_category.setdefault(slug, {})[pid] = candidate_from_doc(pid, data)
+            if source := data.get("source"):
+                self._owned_by[f"{source.get('storeCode')}__{source.get('externalProductId')}"] = pid
+            for key in data.get("identifierKeys", []):
+                self._by_key[key] = pid
+
     def _load_category(self, slug: str) -> dict[str, Candidate]:
         if slug not in self._by_category:
             snaps = self.db.collection("products").where(filter=FieldFilter("categorySlug", "==", slug)).stream()

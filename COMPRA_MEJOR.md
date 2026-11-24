@@ -1380,6 +1380,30 @@ producto, ofertas). Con la reserva que deja el motor alcanzaba para unas 100 vis
   consultar Firestore como antes.
 - **Requisito:** GitHub Pages activado en el repositorio con fuente «GitHub Actions».
 
+### 14.3.2. Copia de trabajo del motor (25-11-2026)
+
+El motor gastaba unas 30 000 lecturas diarias. Cada tienda leía al empezar todas sus
+publicaciones (Plaza Vea: 7 200) y todos los productos de sus categorías para buscar coincidencias,
+aunque la tienda anterior los hubiera leído minutos antes.
+
+- **Copia (`app/state.py`):** el job «Publicar catálogo» arma `engine-state.json.gz` (productos y
+  publicaciones, sin `searchTokens` ni `titleTokens`) y la guarda en la caché de GitHub Actions
+  (`engine-state-<run_id>`; cada job restaura la más reciente).
+- **Cada tienda:** carga la copia y solo pide a Firestore lo cambiado desde entonces: sus
+  publicaciones con `updatedAt` posterior (índice `storeCode + updatedAt`) y los productos
+  cambiados. La búsqueda de coincidencias usa la copia en memoria (`ProductMatcher.preload`).
+  Al terminar deja sus publicaciones finales (`state-out/{TIENDA}.json.gz`, artefacto de 1 día).
+- **Job final:** toma las publicaciones finales de las tiendas que corrieron (exactas, incluidos
+  los borrados), lee los productos cambiados y lo cambiado de las demás tiendas, guarda la copia
+  nueva y arma `catalog.json` desde ella, sin más lecturas.
+- **Respaldo:** sin copia, con una copia de más de 3 días, dañada o sin el índice, el motor lee
+  Firestore como antes. La copia se rearma completa los domingos (o con `catalogo_completo`) si
+  hay cupo.
+- **Sigue igual:** las escrituras (Firestore es la fuente oficial), la búsqueda de productos por
+  código cuando el código no está en la copia (detecta productos creados por otra tienda), y el
+  recálculo de resúmenes.
+- **Efecto esperado:** de ~30 000 a unas 2 000 a 5 000 lecturas al día.
+
 ### 14.4. Presupuesto diario estimado del MVP
 
 Supuestos: 2 tiendas, 500 publicaciones, 4 corridas por día, 100 usuarios activos.

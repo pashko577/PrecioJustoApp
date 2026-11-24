@@ -29,6 +29,7 @@ from app.admin.target import add_target_args, resolve_db
 from app.catalog import flatten_categories
 from app.postprocess.summary import SHOWN_MATCH_STATUSES
 from app.quota import QuotaTracker
+from app.state import EngineState, build_state, load_store_listings
 
 FORMAT_VERSION = 1
 # Tope diario de lecturas del proyecto que la exportación no debe pasar (el plan gratuito da 50 000;
@@ -200,6 +201,28 @@ def build_catalog(db, previous: dict | None, now: datetime | None = None) -> tup
     return catalog, stats
 
 
+def catalog_from_state(state: EngineState, stores: dict[str, dict], now: datetime | None = None) -> dict:
+    """Catálogo armado desde la copia de trabajo del motor: 0 lecturas adicionales."""
+    products = {pid: e for pid, d in state.products.items() if (e := product_entry(pid, d))}
+    active_ids = {pid for pid, p in products.items() if p.get("status", "ACTIVE") == "ACTIVE"}
+    offers = {oid: e for oid, d in state.listings.items()
+              if (e := offer_entry(oid, d)) and e["productId"] in active_ids}
+    categories = [_compact({k: c.get(k) for k in ("slug", "name", "parentSlug", "order", "icon")})
+                  for c in flatten_categories() if c.get("status", "ACTIVE") == "ACTIVE"]
+    return {
+        "version": FORMAT_VERSION,
+        "generatedAt": _iso(now or state.generated_at),
+        "categories": categories,
+        "stores": [store_entry(c, stores[c]) for c in sorted(stores)],
+        "products": [products[p] for p in sorted(products)],
+        "offers": [offers[o] for o in sorted(offers)],
+    }
+
+
+def estimate_full_state_reads(db) -> int:
+    return sum(int(db.collection(c).count().get()[0][0].value) + 1 for c in ("products", "storeProducts")) + 30
+
+
 def write_catalog(catalog: dict, out: Path) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     data = json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -214,8 +237,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--previous-url", help="URL del catálogo publicado (exportación incremental).")
     parser.add_argument("--previous-file", type=Path, help="Catálogo previo local (pruebas).")
     parser.add_argument("--full", action="store_true", help="Ignorar el catálogo previo y leer todo.")
+    parser.add_argument("--state", type=Path, help="Copia de trabajo del motor (se lee y se actualiza).")
+    parser.add_argument("--store-states", type=Path, help="Carpeta con las publicaciones finales de cada tienda.")
     args = parser.parse_args(argv)
     db = resolve_db(args)
+    if args.state:
+        result = _export_with_state(db, args)
+        if result is not None:
+            return result
     published = load_previous(args.previous_url, args.previous_file)
     previous = None if args.full else published
     quota = QuotaTracker(db)
@@ -242,3 +271,34 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+def _export_with_state(db, args) -> int | None:
+    """Actualiza la copia de trabajo y arma el catálogo desde ella. None = usar la vía anterior."""
+    quota = QuotaTracker(db)
+    previous = None if args.full else EngineState.load(args.state)
+    store_runs = load_store_listings(args.store_states)
+    stores = {snap.id: snap.to_dict() or {} for snap in db.collection("stores").stream()}
+    reads = len(stores) + 1
+    if previous is None:
+        estimate = estimate_full_state_reads(db)
+        reads += 2
+        if quota.used_reads + estimate > PROJECT_DAILY_READS_CAP:
+            print(f"Sin cupo para armar la copia de trabajo completa (~{estimate} lecturas; hoy van "
+                  f"{quota.used_reads}): se intenta en la próxima corrida.")
+            quota.record(reads, 0)
+            return None
+    state, state_reads = build_state(db, previous, store_runs, sorted(stores))
+    reads += state_reads
+    state.save(args.state)
+    (args.state.parent / ".updated").touch()  # el workflow solo guarda la caché si cambió
+    catalog = catalog_from_state(state, stores)
+    size = write_catalog(catalog, args.out)
+    quota.record(reads, 0)
+    gz = len(gzip.compress(args.out.read_bytes()))
+    print(f"Copia de trabajo {'completa' if previous is None else 'incremental'}: {len(state.products)} "
+          f"productos, {len(state.listings)} publicaciones ({len(store_runs)} tiendas de esta corrida), "
+          f"{reads} lecturas de Firestore.")
+    print(f"Catálogo: {len(catalog['products'])} productos, {len(catalog['offers'])} ofertas, "
+          f"{size / 1024:.0f} KB ({gz / 1024:.0f} KB comprimido)")
+    return 0

@@ -29,7 +29,7 @@ import os
 from datetime import datetime, timezone
 
 from firebase_admin import firestore
-from google.api_core.exceptions import ResourceExhausted
+from google.api_core.exceptions import FailedPrecondition, InvalidArgument, ResourceExhausted
 from google.cloud.firestore_v1.base_query import FieldFilter
 from scrapy.exceptions import CloseSpider, DropItem
 
@@ -43,6 +43,8 @@ from app.postprocess.alerts import evaluate_alerts
 from app.pipelines.job_errors import record_error
 from app.postprocess.summary import compute_summary, product_image, refresh_summaries
 from app.quota import QuotaTracker
+from app.state import (EngineState, changed_products, changed_store_listings, listing_doc, product_doc,
+                       save_store_listings, state_path_from_env, store_out_dir_from_env)
 
 TRACKED_FIELDS = ("currentPriceCents", "availability", "currentShippingCents")
 # Si alguno de estos cambia, la publicación se reescribe (aunque el precio sea el mismo).
@@ -118,6 +120,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.stopped_by_quota = False
         self.skipped_by_quota = False
         self.quota_unavailable = False
+        self.state_used = False
         self.counters = {"found": 0, "saved": 0, "changed": 0, "matched": 0, "pending": 0, "unmatched": 0,
                          "gone": 0, "duplicates": 0, "written": 0, "unchanged": 0,
                          "possible_duplicates": 0}
@@ -146,12 +149,16 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.store_doc = store_doc.to_dict() or {}
         self.store_name = self.store_doc.get("name", store_code)
         self.matcher = ProductMatcher(self.db, {c["slug"] for c in flatten_categories()})
-        # Una sola consulta con todas las publicaciones de la tienda (en vez de una lectura por oferta).
         query = self.db.collection("storeProducts").where(filter=FieldFilter("storeCode", "==", store_code))
-        # Contarlas cuesta 1 lectura por cada 1000: si leerlas no cabe en el presupuesto, no se corre.
-        count = int(query.count().get()[0][0].value)
-        self.reads += 1 + count // 1000
-        self.quota.include_store_listings(count)
+        # Copia de trabajo (app/state.py): publicaciones y productos sin releerlos de Firestore.
+        if self._load_from_state(store_code, spider):
+            count = 0  # leer las publicaciones ya no cuesta: solo se pidió lo cambiado
+        else:
+            # Una sola consulta con todas las publicaciones de la tienda (en vez de una por oferta).
+            # Contarlas cuesta 1 lectura por cada 1000: si leerlas no cabe en el presupuesto, no se corre.
+            count = int(query.count().get()[0][0].value)
+            self.reads += 1 + count // 1000
+            self.quota.include_store_listings(count)
         if self.quota.budget.exhausted or count > self.quota.budget.reads - 1000:
             self.skipped_by_quota = True
             spider.not_due = True  # no se hacen solicitudes a la tienda
@@ -160,8 +167,9 @@ class FirestorePipeline(CrawlerAwarePipeline):
                 "tiene %s publicaciones). Se intenta en la próxima corrida.",
                 store_code, self.quota.budget.reads, self.quota.budget.writes, count)
             raise CloseSpider("quota_budget")
-        self.existing = {snap.id: snap.to_dict() or {} for snap in query.stream()}
-        self.reads += max(1, len(self.existing))
+        if not self.state_used:
+            self.existing = {snap.id: snap.to_dict() or {} for snap in query.stream()}
+            self.reads += max(1, len(self.existing))
         # En corridas parciales (max_pages) no se registra lastCompleteRunAt: se escriben todas.
         self.write_all = getattr(spider, "max_pages", None) is not None
         self.batch = self.db.batch()
@@ -176,6 +184,38 @@ class FirestorePipeline(CrawlerAwarePipeline):
             "runUrl": os.getenv("RUN_URL"),
         })
         self.writes += 1
+
+    def _load_from_state(self, store_code: str, spider) -> bool:
+        """Carga publicaciones y productos de la copia de trabajo más lo cambiado desde entonces."""
+        state = EngineState.load(state_path_from_env())
+        if state is None:
+            return False
+        try:
+            existing = state.store_listings(store_code)
+            found = 0
+            for snap in changed_store_listings(self.db, store_code, state.since):
+                found += 1
+                existing[snap.id] = listing_doc(snap.to_dict() or {})
+            products = dict(state.products)
+            changed = 0
+            for snap in changed_products(self.db, state.since):
+                changed += 1
+                products[snap.id] = product_doc(snap.to_dict() or {})
+        except (FailedPrecondition, InvalidArgument) as exc:  # p. ej., falta el índice: se lee todo
+            spider.logger.warning("Copia de trabajo no utilizable (%s): se lee Firestore.", exc)
+            return False
+        self.reads += max(found, 1) + max(changed, 1)
+        self.existing = existing
+        self.matcher.preload(products)
+        self.state_used = True
+        spider.logger.info("%s: copia de trabajo del %s (%s publicaciones, %s productos; %s y %s cambiados).",
+                           store_code, state.generated_at.isoformat(), len(existing), len(products), found, changed)
+        return True
+
+    def _remember(self, doc_id: str, data: dict) -> None:
+        """Estado final de una publicación escrita (para la copia de trabajo de la próxima corrida)."""
+        resolved = {k: (self.started if v is firestore.SERVER_TIMESTAMP else v) for k, v in data.items()}
+        self.existing[doc_id] = {**self.existing.get(doc_id, {}), **resolved}
 
     # ---- Presupuesto diario ----
 
@@ -297,6 +337,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
             )
             data["historyStarted"] = True
         batch.set(ref, data, merge=True)
+        self._remember(item.doc_id, data)
         self.counters["written"] += 1
         self.pending_writes += 2 if history else 1
         if created:
@@ -322,7 +363,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
         """RN-09: publicaciones que no aparecieron en esta corrida."""
         batch, pending = self.db.batch(), 0
         # Reutiliza las publicaciones leídas al inicio: no hace lecturas adicionales.
-        for doc_id, data in self.existing.items():
+        for doc_id, data in list(self.existing.items()):
             if doc_id in self.seen or data.get("status") != "ACTIVE":
                 continue
             ref = self.db.collection("storeProducts").document(doc_id)
@@ -330,6 +371,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
                 # Nunca aportó precio a un producto: se borra (los borrados tienen su propia cuota)
                 # en vez de gastar 3 escrituras hasta marcarla GONE. Si vuelve, se procesa como nueva.
                 batch.delete(ref)
+                self.existing.pop(doc_id, None)
                 self.deletes += 1
                 self.counters["gone"] += 1
             else:
@@ -343,6 +385,7 @@ class FirestorePipeline(CrawlerAwarePipeline):
                     if data.get("productId"):
                         self.affected_products.add(data["productId"])
                 batch.update(ref, update)
+                self._remember(doc_id, update)
                 self.writes += 1
             pending += 1
             if pending >= 400:
@@ -423,3 +466,8 @@ class FirestorePipeline(CrawlerAwarePipeline):
         self.quota.record(reads + summaries * 2, writes, self.deletes)
         spider.logger.info("Job %s terminado: %s %s (Firestore: %s lecturas, %s escrituras, %s borrados)",
                            self.job_ref.id, status, self.counters, reads, writes, self.deletes)
+        # Publicaciones finales de la tienda para la copia de trabajo (las usa el job final).
+        if out_dir := store_out_dir_from_env():
+            path = save_store_listings(out_dir, spider.store_code, self.existing)
+            spider.logger.info("Copia de trabajo de %s guardada en %s (%s publicaciones).",
+                               spider.store_code, path, len(self.existing))

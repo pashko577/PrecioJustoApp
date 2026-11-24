@@ -115,6 +115,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "storeProducts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "storeCode",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "updatedAt",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
