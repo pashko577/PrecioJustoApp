@@ -219,8 +219,19 @@ def catalog_from_state(state: EngineState, stores: dict[str, dict], now: datetim
     }
 
 
-def estimate_full_state_reads(db) -> int:
-    return sum(int(db.collection(c).count().get()[0][0].value) + 1 for c in ("products", "storeProducts")) + 30
+def estimate_full_state_reads(db, store_runs: dict, store_codes: list[str]) -> tuple[int, int]:
+    """(lecturas estimadas, lecturas de los conteos) de una copia desde cero.
+
+    Las publicaciones de las tiendas que corrieron vienen de sus archivos: solo cuentan los
+    productos y las publicaciones de las tiendas que no corrieron.
+    """
+    total = int(db.collection("products").count().get()[0][0].value) + 1
+    counts = 1
+    for store in sorted(set(store_codes) - set(store_runs)):
+        query = db.collection("storeProducts").where(filter=FieldFilter("storeCode", "==", store))
+        total += int(query.count().get()[0][0].value) + 1
+        counts += 1
+    return total + 30, counts
 
 
 def write_catalog(catalog: dict, out: Path) -> int:
@@ -281,8 +292,8 @@ def _export_with_state(db, args) -> int | None:
     stores = {snap.id: snap.to_dict() or {} for snap in db.collection("stores").stream()}
     reads = len(stores) + 1
     if previous is None:
-        estimate = estimate_full_state_reads(db)
-        reads += 2
+        estimate, counts = estimate_full_state_reads(db, store_runs, sorted(stores))
+        reads += counts
         if quota.used_reads + estimate > PROJECT_DAILY_READS_CAP:
             print(f"Sin cupo para armar la copia de trabajo completa (~{estimate} lecturas; hoy van "
                   f"{quota.used_reads}): se intenta en la próxima corrida.")

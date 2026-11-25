@@ -82,3 +82,16 @@ def test_listing_written_this_run_keeps_resolved_timestamps(db, tmp_path, monkey
     assert isinstance(saved["updatedAt"], datetime)  # no queda el marcador SERVER_TIMESTAMP
     assert saved["updatedAt"] is not firestore.SERVER_TIMESTAMP
     EngineState(datetime.now(timezone.utc), {}, {"COOLBOX__1": saved}).save(tmp_path / "s.json.gz")
+
+
+def test_first_state_uses_store_files_and_reads_only_other_stores(db):
+    from app.state import build_state
+
+    db.document("products/p1").set({"displayName": "P1", "status": "ACTIVE"})
+    db.document("storeProducts/COOLBOX__1").set({"storeCode": "COOLBOX", "title": "en Firestore"})
+    db.document("storeProducts/EFE__1").set({"storeCode": "EFE", "title": "tienda que no corrió"})
+    runs = {"COOLBOX": {"COOLBOX__1": {"storeCode": "COOLBOX", "title": "del archivo de la tienda"}}}
+    state, reads = build_state(db, None, runs, ["COOLBOX", "EFE"])
+    assert state.listings["COOLBOX__1"]["title"] == "del archivo de la tienda"
+    assert state.listings["EFE__1"]["title"] == "tienda que no corrió"
+    assert reads == 1 + 1  # el producto + la publicación de EFE (las de Coolbox no se leen)

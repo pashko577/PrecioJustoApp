@@ -22,6 +22,10 @@ on:
         type: boolean
         required: false
         default: false
+      catalogo_desde_corrida:
+        description: "Solo publicar el catálogo con las tiendas de otra corrida (su número de ID; no extrae)"
+        required: false
+        default: ""
 
 concurrency:
   group: scraping-${{ github.ref }}
@@ -48,6 +52,8 @@ jobs:
   sync:
     name: Sincronizar categorías y tiendas
     needs: plan
+    # Con «catalogo_desde_corrida» no se extrae: solo se publica el catálogo (job «catalog»).
+    if: ${{ !github.event.inputs.catalogo_desde_corrida }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -199,6 +205,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      actions: read   # descargar las publicaciones finales de las tiendas (también de otra corrida)
       pages: write
       id-token: write
     environment:
@@ -234,6 +241,8 @@ jobs:
           pattern: state-*
           path: state-out
           merge-multiple: true
+          run-id: ${{ github.event.inputs.catalogo_desde_corrida || github.run_id }}
+          github-token: ${{ github.token }}
       - name: Exportar catálogo
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
         working-directory: scraping-engine
@@ -246,7 +255,7 @@ jobs:
           if [ "${{ github.event.inputs.catalogo_completo }}" = "true" ]; then FULL="--full"; fi
           if [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "12" ]; then FULL="--full"; fi
           python -m app.export.catalog --prod --yes $FULL --out ../site/catalog.json --previous-url "$CATALOG_URL" --state ../engine-state/engine-state.json.gz --store-states ../state-out | tee export.txt
-          touch ../site/.nojekyll
+          mkdir -p ../site && touch ../site/.nojekyll
           { echo "### Catálogo de la app"; cat export.txt; } >> "$GITHUB_STEP_SUMMARY"
       - name: Guardar copia de trabajo
         if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('engine-state/.updated') != ''

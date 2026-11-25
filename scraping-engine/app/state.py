@@ -162,7 +162,7 @@ def build_state(db, previous: EngineState | None, store_runs: dict[str, dict[str
                 store_codes: list[str], now: datetime | None = None) -> tuple[EngineState, int]:
     """Copia nueva. Con `previous`, solo lee de Firestore lo que cambió. Devuelve (copia, lecturas).
 
-    - Productos: los cambiados desde la copia anterior (en una corrida, los que tocó alguna tienda).
+    - Productos: todos (copia desde cero) o los cambiados desde la copia anterior.
     - Publicaciones de tiendas que corrieron: las que dejó su job (exactas, incluye borrados).
     - Publicaciones de las demás tiendas: la copia anterior más lo cambiado (decisiones manuales).
     """
@@ -176,13 +176,16 @@ def build_state(db, previous: EngineState | None, store_runs: dict[str, dict[str
 
     listings: dict[str, dict] = {}
     if previous is None:
-        # Copia desde cero: todas las publicaciones, luego se reemplazan las de esta corrida.
-        for snap in db.collection("storeProducts").stream():
-            reads += 1
-            listings[snap.id] = listing_doc(snap.to_dict() or {})
+        # Copia desde cero: las tiendas de esta corrida ya dejaron sus publicaciones completas;
+        # solo se leen de Firestore las de las tiendas que no corrieron.
         for store, run in store_runs.items():
-            listings = {k: v for k, v in listings.items() if v.get("storeCode") != store}
             listings.update(run)
+        for store in sorted(set(store_codes) - set(store_runs)):
+            found = 0
+            for snap in changed_store_listings(db, store, None):
+                found += 1
+                listings[snap.id] = listing_doc(snap.to_dict() or {})
+            reads += max(found, 1)
     else:
         for store in sorted(set(store_codes) | {v.get("storeCode") for v in previous.listings.values()}):
             if store in store_runs:
