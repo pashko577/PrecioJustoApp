@@ -87,7 +87,10 @@ class LocalCatalog {
       found = _active.where((p) => p.identifiers.entries.any((e) =>
           e.key != 'MPN' && e.value.any((code) => (canonicalGtin(code) ?? code) == query.barcode)));
     } else {
-      found = _active.where((p) => query.matches(_tokens[p.id]!.toList()));
+      // Igual que SearchQuery.matches, sin copiar las palabras de cada producto en cada búsqueda.
+      bool matches(Set<String> tokens) =>
+          query.words.every((w) => tokens.contains(w) || tokens.any((t) => t.startsWith(w)));
+      found = _active.where((p) => matches(_tokens[p.id]!));
     }
     return found.take(limit).toList();
   }

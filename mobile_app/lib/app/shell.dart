@@ -70,7 +70,10 @@ class _FloatingNav extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadCountProvider);
-    return SafeArea(
+    // Capa propia: la sombra difuminada no se vuelve a pintar en cada cuadro del scroll de abajo
+    // (en celulares de gama baja eso causaba tirones).
+    return RepaintBoundary(
+      child: SafeArea(
       minimum: const EdgeInsets.fromLTRB(14, 0, 14, 14),
       child: Container(
         height: 66,
@@ -88,7 +91,7 @@ class _FloatingNav extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
