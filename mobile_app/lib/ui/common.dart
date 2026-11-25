@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import '../app/theme.dart';
 import '../core/image_url.dart';
 
-/// Foto del producto publicada por la tienda (`imageUrl`). Las fotos vienen sobre blanco:
-/// se funden con el fondo (`multiply`) para que no se vea un recuadro. Sin foto, o si no
-/// carga, se muestra un ícono neutro.
+/// Foto del producto publicada por la tienda (`imageUrl`). Las fotos vienen sobre blanco, así
+/// que se muestran sobre fondo blanco. Antes se fundían con el fondo gris usando `multiply`, pero
+/// esa mezcla obliga a dibujar cada foto en una capa aparte y en celulares de gama baja (GPU
+/// PowerVR, p. ej. Redmi A1) hacía lento el scroll. Sin foto, o si no carga, se muestra un ícono.
 class ProductImage extends StatelessWidget {
-  const ProductImage({super.key, required this.url, this.background = AppColors.bg, this.padding = 10});
+  const ProductImage({super.key, required this.url, this.background = AppColors.surface, this.padding = 10});
 
   final String? url;
   final Color background;
@@ -38,8 +39,6 @@ class ProductImage extends StatelessWidget {
                     httpHeaders: isVtexImage(url!) ? const {'Accept': 'image/webp,image/*'} : null,
                     memCacheWidth: px,
                     fit: BoxFit.contain,
-                    color: background,
-                    colorBlendMode: BlendMode.multiply,
                     fadeInDuration: const Duration(milliseconds: 150),
                     placeholder: (_, _) => const SizedBox.shrink(),
                     errorWidget: (_, _, _) => placeholder,

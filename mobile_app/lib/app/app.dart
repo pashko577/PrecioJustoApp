@@ -14,6 +14,9 @@ class CompraMejorApp extends ConsumerWidget {
     // Registra/desregistra el celular para push según la sesión (no hace nada en emuladores ni web).
     ref.watch(pushServiceProvider);
     return MaterialApp.router(
+      // Diagnóstico de rendimiento en un celular real, sin cable USB:
+      // flutter build apk --profile --dart-define=PERF_OVERLAY=true
+      showPerformanceOverlay: const bool.fromEnvironment('PERF_OVERLAY'),
       title: 'CompraMejor',
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,

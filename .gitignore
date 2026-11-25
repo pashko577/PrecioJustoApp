@@ -29,3 +29,6 @@ Thumbs.db
 
 # Maqueta
 design-prototype/dist/
+
+# Instaladores generados para probar en el celular (no van al repositorio)
+/dist/
