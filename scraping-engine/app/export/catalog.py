@@ -280,9 +280,6 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
-    sys.exit(main())
-
 
 def _export_with_state(db, args) -> int | None:
     """Actualiza la copia de trabajo y arma el catálogo desde ella. None = usar la vía anterior."""
@@ -313,3 +310,7 @@ def _export_with_state(db, args) -> int | None:
     print(f"Catálogo: {len(catalog['products'])} productos, {len(catalog['offers'])} ofertas, "
           f"{size / 1024:.0f} KB ({gz / 1024:.0f} KB comprimido)")
     return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

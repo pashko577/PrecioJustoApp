@@ -247,6 +247,7 @@ jobs:
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
         working-directory: scraping-engine
         run: |
+          set -o pipefail   # un error del exportador debe verse (antes lo ocultaba «| tee»)
           pip install -r requirements.txt
           rm -f ../engine-state/.updated
           # Precios de lo aprobado en la app (pantalla «Revisar asociaciones»); sin pendientes, 1 lectura.
