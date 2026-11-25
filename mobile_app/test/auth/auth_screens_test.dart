@@ -195,6 +195,38 @@ void main() {
       expect(find.textContaining('Si existe una cuenta'), findsOneWidget);
     });
   });
+
+  testWidgets('al iniciar sesión desde una pestaña protegida, el login se cierra y vuelve a ella', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.5;
+    addTearDown(tester.view.reset);
+    final fake = FakeAuthRepository();
+    final router = GoRouter(initialLocation: '/profile', routes: [
+      GoRoute(
+        path: '/profile',
+        builder: (context, _) => Scaffold(
+          body: TextButton(onPressed: () => context.push('/login?from=%2Fprofile'), child: const Text('ENTRAR')),
+        ),
+      ),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+    ]);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [authRepositoryProvider.overrideWithValue(fake)],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ENTRAR'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('login-email')), 'ana@example.com');
+    await tester.enterText(find.byKey(const Key('login-password')), 'secreta123');
+    await tester.tap(find.text('Ingresar'));
+    await tester.pumpAndSettle();
+    expect(fake.calls, ['signIn:ana@example.com']);
+    expect(find.byType(LoginScreen), findsNothing); // ya no se queda en el login
+    expect(find.text('ENTRAR'), findsOneWidget);
+  });
 }
 
 /// Repositorio cuyo signIn tarda hasta que se completa [_wait].

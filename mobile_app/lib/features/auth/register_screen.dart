@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router.dart';
 import 'auth_errors.dart';
 import 'auth_providers.dart';
 import 'validators.dart';
@@ -55,6 +56,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Cuenta creada! Te enviamos un correo para verificar tu dirección.')),
         );
+        leaveAuthFlow(context);
       }
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _error = e.message);

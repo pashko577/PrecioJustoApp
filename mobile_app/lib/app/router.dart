@@ -42,12 +42,22 @@ String? authRedirect({required bool loggedIn, required Uri location}) {
     ).toString();
   }
   if (loggedIn && authPaths.contains(path)) {
-    final from = location.queryParameters['from'];
-    // Solo rutas internas (evita redirecciones abiertas a otros sitios).
-    final safe = from != null && from.startsWith('/') && !from.startsWith('//');
-    return safe ? from : '/';
+    return safeReturnPath(location.queryParameters['from']);
   }
   return null;
+}
+
+/// Destino tras iniciar sesión: solo rutas internas (evita redirecciones abiertas a otros sitios).
+String safeReturnPath(String? from) =>
+    from != null && from.startsWith('/') && !from.startsWith('//') ? from : '/';
+
+/// Sale de login/registro después de entrar. Hace falta además de la redirección automática:
+/// esas pantallas se abren con `push` encima de otra y la redirección no siempre las cierra
+/// (se quedaba en el login aunque la sesión ya estaba iniciada).
+void leaveAuthFlow(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  if (router == null) return;
+  router.go(safeReturnPath(router.state.uri.queryParameters['from']));
 }
 
 /// Notifica al router cada vez que cambia la sesión.

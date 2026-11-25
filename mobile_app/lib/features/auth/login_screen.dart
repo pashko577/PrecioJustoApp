@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router.dart';
 import 'auth_errors.dart';
 import 'auth_providers.dart';
 import 'validators.dart';
@@ -36,7 +37,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       await ref.read(authRepositoryProvider).signIn(email: _email.text, password: _password.text);
-      // El router redirige solo al detectar la sesión.
+      if (mounted) leaveAuthFlow(context);
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {
