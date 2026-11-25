@@ -10,6 +10,7 @@ Uso (emulador por defecto; producción con --prod --yes):
     python -m app.admin.review_matches duplicates                    # posibles duplicados detectados
     python -m app.admin.review_matches merge producto-a producto-b   # unifica b en a
     python -m app.admin.review_matches recheck [--dry-run]           # reaplica reglas nuevas
+    python -m app.admin.review_matches apply-app-decisions           # precios de lo revisado en la app
 
 Las decisiones manuales (MATCHED_MANUAL, REJECTED) se respetan en las corridas siguientes.
 Cada acción recalcula los precios de los productos afectados y queda en auditLogs.
@@ -237,6 +238,35 @@ def _format(listing: dict) -> str:
             f"{listing.get('matchReason') or ''})")
 
 
+def apply_app_decisions(db) -> dict:
+    """Recalcula los precios de los productos aprobados en la app (pantalla «Revisar asociaciones»).
+
+    La app guarda la decisión con `needsSummary: true` porque no puede calcular el resumen completo
+    (necesita las ofertas de todas las tiendas). Lo corre el workflow en cada ejecución: sin
+    decisiones pendientes cuesta 1 lectura.
+    """
+    snaps = list(db.collection("storeProducts").where(filter=FieldFilter("needsSummary", "==", True)).stream())
+    products = {(s.to_dict() or {}).get("productId") for s in snaps} - {None}
+    updated = refresh_summaries(db, products)
+    batch, pending = db.batch(), 0
+    for snap in snaps:
+        batch.update(snap.reference, {"needsSummary": firestore.DELETE_FIELD})
+        pending += 1
+        if pending == 400:
+            batch.commit()
+            batch, pending = db.batch(), 0
+    if pending:
+        batch.commit()
+    by_status: dict[str, int] = {}
+    for snap in snaps:
+        status = (snap.to_dict() or {}).get("matchStatus", "?")
+        by_status[status] = by_status.get(status, 0) + 1
+    if snaps:
+        log_action(db, "APP_DECISIONS_APPLIED", "storeProduct", "*",
+                   {"listings": len(snaps), "summaries": updated, "byStatus": by_status})
+    return {"listings": len(snaps), "summaries": updated}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -247,6 +277,7 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_parser(name).add_argument("listing_id")
     sub.add_parser("duplicates")
     sub.add_parser("recheck").add_argument("--dry-run", action="store_true")
+    sub.add_parser("apply-app-decisions")
     p_merge = sub.add_parser("merge")
     p_merge.add_argument("keep_product_id")
     p_merge.add_argument("remove_product_id")
@@ -279,6 +310,10 @@ def main(argv: list[str] | None = None) -> int:
             for item in items:
                 print(f"{item['id']}\n    asociado a {item.get('productId')} · también coincide con "
                       f"{item.get('possibleDuplicateOf')}\n    {item.get('title', '')[:90]}")
+        elif args.command == "apply-app-decisions":
+            result = apply_app_decisions(db)
+            print(f"Decisiones de la app aplicadas: {result['listings']} publicaciones, "
+                  f"{result['summaries']} precios de productos recalculados.")
         elif args.command == "recheck":
             items = recheck(db, dry_run=args.dry_run)
             verb = "Se pasarían" if args.dry_run else "Pasaron"

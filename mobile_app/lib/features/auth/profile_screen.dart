@@ -5,6 +5,7 @@ import '../../app/router.dart';
 import '../../app/shell.dart';
 import '../../app/theme.dart';
 import '../../models/user_profile.dart';
+import '../admin/review_repository.dart';
 import 'auth_errors.dart';
 import 'auth_providers.dart';
 import 'validators.dart';
@@ -73,6 +74,22 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
+                      if (ref.watch(isAdminProvider).value == true) ...[
+                        const SizedBox(height: 20),
+                        _SectionTitle('Administración'),
+                        _Group(
+                          children: [
+                            ListTile(
+                              key: const Key('admin-review'),
+                              leading: const Icon(Icons.fact_check_outlined),
+                              title: const Text('Revisar asociaciones'),
+                              subtitle: const Text('Aprueba o rechaza precios dudosos de las tiendas'),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => ref.read(routerProvider).push('/admin/review'),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       _SectionTitle('Notificaciones'),
                       _Group(

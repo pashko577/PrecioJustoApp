@@ -15,6 +15,7 @@ import '../features/catalog/product_screen.dart';
 import '../features/catalog/search_screen.dart';
 import '../features/notifications/notifications.dart';
 import '../features/tracking/tracking_screens.dart';
+import '../features/admin/review_screen.dart';
 import 'shell.dart';
 
 /// Pantallas de acceso: si ya hay sesión, no tiene sentido mostrarlas.
@@ -168,6 +169,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/notifications',
         builder: (_, _) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/review',
+        builder: (_, _) => const ReviewScreen(),
       ),
     ],
   );

@@ -192,3 +192,25 @@ def test_config_sync_writes_nothing_when_unchanged(db):
     db.document("stores/COOLBOX").set({"lastCompleteRunAt": NOW}, merge=True)  # dato que pone el motor
     assert upload_categories(db, flatten_categories()) == (0, len(flatten_categories()))
     assert upload_stores(db, stores) == (0, len(stores))
+
+
+def test_apply_app_decisions_refreshes_prices_of_approved_listings(db):
+    from datetime import datetime, timezone
+
+    from app.admin.review_matches import apply_app_decisions
+
+    now = datetime.now(timezone.utc)
+    db.document("stores/OECHSLE").set({"name": "Oechsle", "freshnessMinutes": 1440})
+    db.document("products/ps5").set({"displayName": "PS5", "status": "ACTIVE", "categorySlug": "consolas",
+                                     "summary": {"minPriceCents": None, "offerCount": 0}})
+    # Aprobada en la app: la app no puede recalcular el resumen y deja `needsSummary`.
+    db.document("storeProducts/OECHSLE__1").set({
+        "productId": "ps5", "storeCode": "OECHSLE", "matchStatus": "MATCHED_MANUAL", "needsSummary": True,
+        "status": "ACTIVE", "currentPriceCents": 179_900, "availability": "AVAILABLE", "currency": "PEN",
+        "lastCheckedAt": now, "missedRuns": 0,
+    })
+    assert apply_app_decisions(db) == {"listings": 1, "summaries": 1}
+    summary = db.document("products/ps5").get().to_dict()["summary"]
+    assert summary["minPriceCents"] == 179_900 and summary["offerCount"] == 1
+    assert "needsSummary" not in db.document("storeProducts/OECHSLE__1").get().to_dict()
+    assert apply_app_decisions(db) == {"listings": 0, "summaries": 0}  # sin pendientes
