@@ -124,7 +124,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: engine-state
-          key: engine-state-${{ github.run_id }}
+          key: engine-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: engine-state-
 
       - name: Ejecutar spider
@@ -231,7 +231,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: engine-state
-          key: engine-state-${{ github.run_id }}
+          key: engine-state-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: engine-state-
       - name: Publicaciones finales de cada tienda
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
@@ -263,11 +263,17 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: engine-state
-          key: engine-state-${{ github.run_id }}
+          # Con el intento: al reintentar una corrida se guarda la copia nueva (no choca con la anterior).
+          key: engine-state-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: actions/upload-pages-artifact@v4
         if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('site/catalog.json') != ''
         with:
           path: site
+          # Nombre por intento: al reintentar, el del intento anterior sigue existiendo y
+          # deploy-pages falla con «Multiple artifacts named github-pages».
+          name: github-pages-${{ github.run_attempt }}
       - id: deploy
         if: env.FIREBASE_SERVICE_ACCOUNT != '' && hashFiles('site/catalog.json') != ''
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
