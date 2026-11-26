@@ -80,7 +80,8 @@ jobs:
     name: Scraping ${{ matrix.spider }}
     needs: [plan, sync]
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Unik abre ~560 fichas una por una (pausa de 4 s): hasta ~1 h una vez al día.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 1   # una tienda a la vez

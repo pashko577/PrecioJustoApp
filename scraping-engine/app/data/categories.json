@@ -11,7 +11,10 @@
     { "slug": "memorias-ram", "name": "Memorias RAM" },
     { "slug": "placas-madre", "name": "Placas madre" },
     { "slug": "tarjetas-graficas", "name": "Tarjetas gráficas" },
-    { "slug": "discos-externos", "name": "Discos externos" }
+    { "slug": "discos-externos", "name": "Discos externos" },
+    { "slug": "teclados", "name": "Teclados" },
+    { "slug": "mouse", "name": "Mouse" },
+    { "slug": "audifonos", "name": "Audífonos" }
   ]},
   { "slug": "electrodomesticos", "name": "Electrodomésticos", "icon": "kitchen", "children": [
     { "slug": "refrigeradoras", "name": "Refrigeradoras" },

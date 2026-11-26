@@ -656,6 +656,15 @@ El detalle de cada evaluación está en `scraping-engine/app/data/stores.json`.
 | Wong | VTEX | ⏸ Pendiente | No se pudieron leer los términos |
 | Falabella, Sodimac | — | ❌ No viable | Sus términos prohíben reproducir o explotar contenidos y "compilaciones de datos" sin consentimiento escrito |
 | Hiraoka | — | ❌ No viable | Prohíbe expresamente la "extracción y/o reutilización" |
+| MM Store | Shopify | ✅ Activa (24 h) | Listado JSON público por colección; periféricos (teclados, mouse, audífonos) y SSD. Código de barras solo si el SKU es un EAN válido |
+| Miau Gaming | WooCommerce | ✅ Activa (24 h), **sin fotos** | Store API pública. Sus términos reservan derechos sobre "logos, textos, imágenes": solo se usan nombre, precio, stock y enlace |
+| Unik Store | Sitio propio | ⏸ Por activar (24 h) | robots.txt prohíbe URLs con `?`: se lee `sitemap.xml` y la ficha de cada producto (schema.org, SKU = código del fabricante). ~560 fichas, ~1 h |
+| CGS Computer | Sitio propio | ⏸ Por activar (24 h) | Listado HTML, precio en soles; sin código de fabricante (asocia por puntuación) |
+| Banana Store | Sitio propio | ⏸ Por activar (24 h) | Listado HTML con precio en soles calculado por la tienda; sin código de fabricante |
+| Fabritec | Sitio propio | ⏸ Por activar (24 h) | Consulta pública de su propia página de categoría (JSON); número de parte en el nombre |
+| Rstore | Bsale | ❌ No viable | robots.txt: `Disallow: /` para todos los bots |
+
+Tiendas de cómputo (revisadas el 2026-11-26): se activan de a dos por día para no pasar el límite diario de escrituras (el motor además se frena solo: 3 500 escrituras por corrida, 15 000 al día). Impacto sigue en pausa: la ficha publica el precio en dólares y el precio en soles lo calcula el navegador con un tipo de cambio que se pide a `/api/`, ruta que su robots.txt prohíbe.
 
 Para las tiendas no viables la alternativa es un programa de afiliados o un permiso escrito. Mercado Libre requiere su API oficial con una aplicación de desarrollador registrada.
 

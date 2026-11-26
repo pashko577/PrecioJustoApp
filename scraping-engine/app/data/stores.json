@@ -295,7 +295,7 @@
       "reviewedAt": "2026-11-23",
       "robotsTxt": "Permite bots genéricos (solo bloquea bots de IA por nombre).",
       "terms": "Términos de Importaciones Impacto S.A.C. (/terminos, no enlazados en la portada): tratan datos personales. Sin cláusulas sobre extracción ni propiedad intelectual.",
-      "conclusion": "Pendiente: términos y robots.txt lo permiten, pero el HTML solo trae precios en DÓLARES (la app compara en soles, RN-04) y el listado se carga con un buscador externo (Typesense) cuya clave está en su JavaScript: no se usa una clave que no fue emitida para nosotros.",
+      "conclusion": "Pendiente: términos y robots.txt lo permiten, pero el HTML solo trae precios en DÓLARES (la app compara en soles, RN-04) y el listado se carga con un buscador externo (Typesense) cuya clave está en su JavaScript: no se usa una clave que no fue emitida para nosotros. Revisado de nuevo el 2026-11-26: la ficha publica el precio solo en dólares (schema.org priceCurrency=USD); el precio en soles que se ve en pantalla lo calcula el navegador con un tipo de cambio que pide a /api/, ruta que robots.txt prohíbe. Sigue en pausa por decisión del usuario.",
       "notes": "Next.js detrás de Cloudflare. Las páginas de producto traen JSON-LD (USD) y hay sitemap (~1400 URLs). Activable si se agrega soporte de USD con tipo de cambio visible o la tienda publica soles."
     }
   },
@@ -545,6 +545,201 @@
       "/441/442/507/": "Electrohogar > Refrigeración > Refrigeradoras",
       "/441/445/511/": "Electrohogar > Lavado > Lavadoras",
       "/441/446/487/": "Electrohogar > Electrodomésticos > Hornos microondas"
+    }
+  },
+  {
+    "code": "MMSTORE",
+    "name": "MM Store",
+    "baseUrl": "https://mmstoreperu.com/es-pe",
+    "platform": "SHOPIFY",
+    "spider": "mmstore",
+    "scrapingEnabled": true,
+    "showImages": true,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "robots.txt estándar de Shopify: User-agent * solo restringe carrito, checkout, cuentas y combinaciones de filtros; /collections/*/products.json está permitido.",
+      "terms": "Solo publica términos de garantía; sin cláusulas sobre extracción ni propiedad intelectual.",
+      "conclusion": "Viable: listado JSON público de Shopify por colección (250 por página), precios en soles (moneda de la tienda: PEN), 1 solicitud a la vez con pausa. Cloudflare solo agrega su script pasivo; respondió sin desafío desde Lima. Falta confirmar desde GitHub Actions: si responde 403/429 o un desafío, la corrida se detiene (no se evade) y se desactiva.",
+      "notes": "Tienda de periféricos (teclados, mouse, audífonos) y algunos SSD. mmstoreperu.com redirige a /es-pe. El SKU solo sirve si es un código de barras válido."
+    },
+    "maxPagesPerCategory": 8,
+    "categoryPaths": {
+      "teclados": "teclados",
+      "mouse": "mouse",
+      "audifonos": "audifonos",
+      "unidad-de-ssd": "ssd"
+    }
+  },
+  {
+    "code": "MIAU",
+    "name": "Miau Gaming",
+    "baseUrl": "https://miaugaming.com",
+    "platform": "WOOCOMMERCE",
+    "spider": "miau",
+    "scrapingEnabled": true,
+    "showImages": false,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "User-agent * solo restringe wp-admin, archivos internos de WooCommerce y ?add-to-cart; la Store API (/wp-json/wc/store) está permitida.",
+      "terms": "Términos y condiciones, punto 9: 'Todo el contenido del sitio web (logos, textos, imágenes) es propiedad de Miau Gaming y está protegido por derechos de autor'. Sin cláusula sobre extracción.",
+      "conclusion": "Viable SIN FOTOS (showImages=false): se toman solo datos de hecho (nombre, precio en soles, disponibilidad y enlace a la tienda) desde la Store API pública de WooCommerce. No se muestran sus imágenes ni descripciones.",
+      "notes": "Catálogo pequeño (~100 productos de PC). Precios en céntimos (currency_minor_unit=2)."
+    },
+    "categoryPaths": {
+      "138": "procesadores",
+      "141": "tarjetas-graficas",
+      "145": "placas-madre",
+      "148": "memorias-ram",
+      "152": "ssd",
+      "154": "monitores"
+    }
+  },
+  {
+    "code": "UNIK",
+    "name": "Unik Store",
+    "baseUrl": "https://unikstoreperu.com",
+    "platform": "SITEMAP_JSONLD",
+    "spider": "unik",
+    "scrapingEnabled": false,
+    "showImages": true,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "productPathPrefix": "/producto/",
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "User-agent * restringe checkout, carrito, cliente, buscar y TODA URL con '?' (Disallow: /*?*). Publica sitemap.xml con sus fichas.",
+      "terms": "Solo publica política de privacidad y condiciones de garantía; sin cláusulas sobre extracción ni propiedad intelectual.",
+      "conclusion": "Viable leyendo sitemap.xml y la ficha de cada producto (sin URLs con '?', que robots.txt prohíbe: por eso no se recorre la paginación del listado). Datos de schema.org con precio en soles y SKU = código del fabricante. Una solicitud a la vez, pausa de 4 s, una vez al día. Cloudflare solo agrega su script pasivo; respondió sin desafío desde Lima. Falta confirmar desde GitHub Actions: si responde 403/429 o un desafío, la corrida se detiene (no se evade) y se desactiva.",
+      "notes": "~560 fichas de nuestras categorías (elegidas por el nombre de la URL)."
+    },
+    "categoryPaths": {
+      "^procesador": "procesadores",
+      "^(tarjeta-de-video|tarjeta-grafica)": "tarjetas-graficas",
+      "^memoria-ram": "memorias-ram",
+      "^(placa-madre|motherboard|mainboard)": "placas-madre",
+      "^(disco-solido|ssd|unidad-de-estado-solido)": "ssd",
+      "^monitor": "monitores",
+      "^(laptop|notebook)": "laptops",
+      "^teclado": "teclados",
+      "^mouse": "mouse",
+      "^(audifono|auricular)": "audifonos"
+    }
+  },
+  {
+    "code": "CGS",
+    "name": "CGS Computer",
+    "baseUrl": "https://cgs-computer.pe",
+    "platform": "CGS",
+    "spider": "cgs",
+    "scrapingEnabled": false,
+    "showImages": true,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "User-agent * con Allow: / y Content-Signal search=yes, ai-train=no (comparar precios es un uso de búsqueda; no se entrena IA). Restringe /config/, /ACTIONVQ/, /MORENOKU/ y /error/.",
+      "terms": "No publica términos de uso enlazados en la portada; sin cláusulas conocidas sobre extracción.",
+      "conclusion": "Viable: listados de categoría en HTML (20 por página; la página va en base64 como la arma la tienda), precio en soles, 1 solicitud a la vez con pausa de 6 s, una vez al día. Cloudflare solo agrega su script pasivo; respondió sin desafío desde Lima. Falta confirmar desde GitHub Actions: si responde 403/429 o un desafío, la corrida se detiene (no se evade) y se desactiva.",
+      "notes": "El listado no trae código de fabricante: se asocia por puntuación (no crea productos)."
+    },
+    "maxPagesPerCategory": 15,
+    "categoryPaths": {
+      "p=OQ==&cat=Procesadores": "procesadores",
+      "p=MTE=&cat=Tarjetas-de-Video": "tarjetas-graficas",
+      "p=OA==&cat=Placas-Madre": "placas-madre",
+      "p=NQ==&cat=Memorias-RAM": "memorias-ram",
+      "p=MTM=&cat=Laptops": "laptops",
+      "p=Ng==&cat=Monitores": "monitores",
+      "p=MTQ=&cat=Mouses": "mouse",
+      "p=MTc=&cat=Teclados": "teclados",
+      "p=MTU=&cat=Audifonos": "audifonos"
+    }
+  },
+  {
+    "code": "BANANASTORE",
+    "name": "Banana Store",
+    "baseUrl": "https://bananastore.com.pe",
+    "platform": "BANANASTORE",
+    "spider": "bananastore",
+    "scrapingEnabled": false,
+    "showImages": true,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "User-agent * con Allow: / y Content-Signal search=yes, ai-train=no. Restringe /config/, /ACTIONVVQ/, /MORENOKU/, /plugins/, /salir/, /trol/ y /views/.",
+      "terms": "Términos y condiciones: regulan compras, pagos y garantías; sin cláusulas sobre extracción ni propiedad intelectual.",
+      "conclusion": "Viable: listados de categoría en HTML (16 por página), precio en soles que calcula la tienda junto al de dólares, 1 solicitud a la vez con pausa de 6 s, una vez al día. Cloudflare solo agrega su script pasivo; respondió sin desafío desde Lima. Falta confirmar desde GitHub Actions: si responde 403/429 o un desafío, la corrida se detiene (no se evade) y se desactiva.",
+      "notes": "El listado no trae código de fabricante: se asocia por puntuación (no crea productos)."
+    },
+    "maxPagesPerCategory": 15,
+    "categoryPaths": {
+      "procesador": "procesadores",
+      "tarjeta-de-video": "tarjetas-graficas",
+      "placa-madre": "placas-madre",
+      "memoria-ram": "memorias-ram",
+      "ssd": "ssd",
+      "laptop": "laptops",
+      "monitor-fhd": "monitores",
+      "monitor-qhd": "monitores",
+      "monitor-uhd": "monitores",
+      "teclado": "teclados",
+      "mouse": "mouse",
+      "auricular": "audifonos",
+      "consola": "consolas"
+    }
+  },
+  {
+    "code": "FABRITEC",
+    "name": "Fabritec",
+    "baseUrl": "https://www.fabritec.pe",
+    "platform": "FABRITEC",
+    "spider": "fabritec",
+    "scrapingEnabled": false,
+    "showImages": true,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "User-agent * solo restringe /admin.",
+      "terms": "Términos y condiciones sin cláusulas sobre extracción ni propiedad intelectual.",
+      "conclusion": "Viable: la página de categoría carga los productos con una consulta pública de la propia tienda (/ajax/public/products, JSON con las tarjetas; permitida por robots.txt). Precio en soles y número de parte en el nombre. 1 solicitud a la vez con pausa de 6 s, una vez al día. Cloudflare solo agrega su script pasivo; respondió sin desafío desde Lima. Falta confirmar desde GitHub Actions: si responde 403/429 o un desafío, la corrida se detiene (no se evade) y se desactiva.",
+      "notes": "El número de parte entre paréntesis ('(BX8071512400-OEM)') se usa como código de fabricante."
+    },
+    "maxPagesPerCategory": 10,
+    "categoryPaths": {
+      "11/23": "laptops",
+      "11/24": "laptops",
+      "11/25": "laptops",
+      "11/18": "laptops",
+      "9/30": "procesadores",
+      "9/34": "tarjetas-graficas",
+      "9/31": "placas-madre",
+      "9/32": "memorias-ram",
+      "18/40": "monitores",
+      "6/10": "mouse",
+      "6/9": "teclados",
+      "23/48": "audifonos"
+    }
+  },
+  {
+    "code": "RSTORE",
+    "name": "Rstore",
+    "baseUrl": "https://www.rstore.pe",
+    "platform": "BSALE",
+    "spider": null,
+    "scrapingEnabled": false,
+    "scrapingIntervalMinutes": 1440,
+    "freshnessMinutes": 2160,
+    "review": {
+      "reviewedAt": "2026-11-26",
+      "robotsTxt": "User-agent * con Crawl-delay: 120, Allow: /$ y Disallow: / (prohíbe todo salvo la portada).",
+      "terms": "No revisados: robots.txt ya prohíbe la extracción.",
+      "conclusion": "NO viable: robots.txt prohíbe recorrer la tienda. Se respeta."
     }
   }
 ]

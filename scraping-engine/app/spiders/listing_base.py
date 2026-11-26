@@ -1,4 +1,4 @@
-"""Base común para extractores de listados HTML (Magento, PrestaShop, Memory Kings).
+"""Base común para extractores de listados (Magento, PrestaShop, Memory Kings, Shopify, WooCommerce...).
 
 Cada plataforma define cómo se arma la URL de una página (`page_url`) y cómo se lee un
 listado (`parse_body`). Esta base aporta las reglas de extracción responsable
@@ -47,6 +47,9 @@ class ListingSpider(scrapy.Spider):
     base_url: str = ""
     categories: dict[str, str] = {}
     scope_pages: int = DEFAULT_SCOPE_PAGES
+    store_config: dict = {}  # entrada de stores.json (opciones propias de cada plataforma)
+    # Listados sin total (APIs JSON): se pide la página siguiente mientras venga llena.
+    full_page_size: int | None = None
 
     handle_httpstatus_list = list(STOP_STATUSES)
     custom_settings = {
@@ -96,15 +99,17 @@ class ListingSpider(scrapy.Spider):
         for path, slug in self.categories.items():
             yield self.make_request(path, slug, 1)
 
-    def parse_page(self, response, path: str, slug: str, page: int):
+    def stop_if_blocked(self, response, where: str) -> str:
+        """Texto de la respuesta; ante 403/426/429/503 o un desafío anti-bots detiene la corrida."""
         body = response.text if hasattr(response, "text") else ""
         if response.status in STOP_STATUSES or is_challenge(body):
             self.stopped_early = True
-            message = f"HTTP {response.status} o desafío anti-bots en {path}: se suspende la corrida (no se evade)."
+            message = f"HTTP {response.status} o desafío anti-bots en {where}: se suspende la corrida (no se evade)."
             record_error(self, "ERROR", message, response.url)
             raise CloseSpider(f"blocked_{response.status}")
+        return body
 
-        offers, warnings, total = self.parse_body(body, slug)
+    def emit(self, offers: list[ScrapedOffer], warnings: list[str]):
         for warning in warnings:
             self.crawler.stats.inc_value("offers/skipped")
             self.logger.debug(warning)
@@ -115,9 +120,18 @@ class ListingSpider(scrapy.Spider):
             self.seen_ids.add(offer.external_product_id)
             yield offer
 
+    def parse_page(self, response, path: str, slug: str, page: int):
+        body = self.stop_if_blocked(response, path)
+        offers, warnings, total = self.parse_body(body, slug)
+        yield from self.emit(offers, warnings)
+
         per_page = max(len(offers) + len(warnings), 1)
         within_limit = page < min(self.max_pages or self.scope_pages, MAX_PAGES_PER_CATEGORY)
-        if offers and total and page * per_page < total and within_limit:
+        if total is None and self.full_page_size:
+            more = per_page >= self.full_page_size
+        else:
+            more = bool(total) and page * per_page < total
+        if offers and more and within_limit:
             yield self.make_request(path, slug, page + 1)
 
 
@@ -141,6 +155,7 @@ def build_spider_class(store: dict, base: type[ListingSpider], module: str) -> t
         "allowed_domains": [urlparse(store["baseUrl"]).netloc],
         "categories": dict(store.get("categoryPaths") or {}),
         "scope_pages": int(store.get("maxPagesPerCategory") or DEFAULT_SCOPE_PAGES),
+        "store_config": store,
     })
 
 

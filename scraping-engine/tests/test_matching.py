@@ -169,8 +169,16 @@ def test_enabled_spiders_and_registry_agree():
     assert {"coolbox", "phantom", "sercoplus", "memorykings"} <= set(enabled)
     # Efe y La Curacao responden 426 a GitHub Actions (bloqueo): desactivadas, sus extractores siguen.
     assert not {"efe", "lacuracao"} & set(enabled) and {"efe", "lacuracao"} <= set(MAGENTO)
+    from app.spiders.shopify.registry import SPIDERS as SHOPIFY
+    from app.spiders.sitemap_products.registry import SPIDERS as SITEMAP
+    from app.spiders.tiendas_pc.registry import SPIDERS as TIENDAS_PC
+    from app.spiders.woocommerce.registry import SPIDERS as WOOCOMMERCE
     # Toda tienda activa debe tener un extractor generado.
-    assert set(enabled) <= set(VTEX) | set(MAGENTO) | set(PRESTASHOP) | set(MEMORYKINGS)
+    every = (set(VTEX) | set(MAGENTO) | set(PRESTASHOP) | set(MEMORYKINGS) | set(SHOPIFY) | set(WOOCOMMERCE)
+             | set(SITEMAP) | set(TIENDAS_PC))
+    assert set(enabled) <= every
+    # Las tiendas de PC nuevas tienen extractor aunque se activen de a poco.
+    assert {"mmstore", "miau", "unik", "cgs", "bananastore", "fabritec"} <= every
 
 
 def test_store_with_unknown_category_rejected(tmp_path):

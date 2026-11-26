@@ -26,6 +26,12 @@ const storeBrands = <String, StoreBrand>{
   'ESTILOS': StoreBrand(initials: 'ES', color: Color(0xFFE3141B)),
   'MEMORYKINGS': StoreBrand(initials: 'MK', color: Color(0xFF15803D), hasLogo: false),
   'SHOPSTAR': StoreBrand(initials: 'SS', color: Color(0xFF1BA6E8), hasLogo: false),
+  'MMSTORE': StoreBrand(initials: 'MM', color: Color(0xFF111111), hasLogo: false),
+  'MIAU': StoreBrand(initials: 'MI', color: Color(0xFF7C3AED), hasLogo: false),
+  'UNIK': StoreBrand(initials: 'UK', color: Color(0xFFD90000), hasLogo: false),
+  'CGS': StoreBrand(initials: 'CG', color: Color(0xFF1F7A3A), hasLogo: false),
+  'BANANASTORE': StoreBrand(initials: 'BS', color: Color(0xFF8A6D00), hasLogo: false),
+  'FABRITEC': StoreBrand(initials: 'FT', color: Color(0xFF0E224D), hasLogo: false),
 };
 
 /// Marca de una tienda; las desconocidas usan iniciales de su nombre sobre marino.
