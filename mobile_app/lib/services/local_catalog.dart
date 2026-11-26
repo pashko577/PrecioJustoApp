@@ -48,14 +48,25 @@ class LocalCatalog {
         [for (final e in (json[key] as List? ?? const [])) (e as Map).cast<String, dynamic>()];
 
     final offers = <String, List<StoreOffer>>{};
+    final storesByProduct = <String, Set<String>>{};
     for (final o in list('offers')) {
-      offers.putIfAbsent(o['productId'] as String, () => []).add(StoreOffer.fromCatalog(o));
+      final pid = o['productId'] as String;
+      offers.putIfAbsent(pid, () => []).add(StoreOffer.fromCatalog(o));
+      storesByProduct.putIfAbsent(pid, () => {}).add(o['storeCode'] as String? ?? '');
+    }
+    // Tiendas distintas por producto: el catálogo trae todas las publicaciones, así que se cuentan
+    // aquí (también para productos cuyo resumen aún no trae `storeCount`).
+    Product product(Map<String, dynamic> p) {
+      final stores = storesByProduct[p['id']];
+      if (stores == null) return Product.fromCatalog(p);
+      final summary = {...?(p['summary'] as Map?)?.cast<String, dynamic>(), 'storeCount': stores.length};
+      return Product.fromCatalog({...p, 'summary': summary});
     }
     return LocalCatalog._(
       generatedAt: DateTime.tryParse(json['generatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
       categories: list('categories').map(Category.fromCatalog).toList()..sort((a, b) => a.order.compareTo(b.order)),
       stores: {for (final s in list('stores')) s['code'] as String: StoreInfo.fromCatalog(s)},
-      products: {for (final p in list('products')) p['id'] as String: Product.fromCatalog(p)},
+      products: {for (final p in list('products')) p['id'] as String: product(p)},
       offersByProduct: offers,
     );
   }

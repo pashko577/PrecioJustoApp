@@ -92,6 +92,8 @@ def compute_summary(offers: list[dict], stores: dict[str, dict], now: datetime |
         "maxPriceCents": max(prices) if prices else None,
         "sortPriceCents": best["currentPriceCents"] if best else NO_PRICE_SORT_VALUE,
         "offerCount": len(active),
+        # Tiendas distintas: en un marketplace varios vendedores publican el mismo producto.
+        "storeCount": len({o.get("storeCode") for o in active}),
         "verifiedOfferCount": len(verified),
         "lastCheckedAt": max(checks) if checks else None,
         # Campos siempre presentes (también en None): el guardado con merge no debe dejar

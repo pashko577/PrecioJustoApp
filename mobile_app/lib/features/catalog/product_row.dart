@@ -92,7 +92,7 @@ class ProductRow extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${product.brand.isEmpty ? '' : '${product.brand}, '}${storesLabel(s.offerCount)}',
+                        '${product.brand.isEmpty ? '' : '${product.brand}, '}${storesLabel(s.storeCount)}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
@@ -300,7 +300,7 @@ class ProductCard extends ConsumerWidget {
                         ] else
                           const Spacer(),
                         Text(
-                          storesLabel(s.offerCount),
+                          storesLabel(s.storeCount),
                           style: theme.textTheme.labelSmall,
                         ),
                       ],

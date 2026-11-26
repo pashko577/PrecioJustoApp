@@ -24,7 +24,7 @@ Map<String, dynamic> catalogJson({int ps5Price = 199900}) => {
      'summary': {'minPriceCents': ps5Price, 'offerCount': 1, 'priceDropPercent': 10, 'priceDropFromCents': 222100,
                  'priceDroppedAt': '2026-11-23T10:00:00Z'}},
     {'id': 'lenovo', 'name': 'Laptop Lenovo IdeaPad Slim 3', 'brand': 'Lenovo', 'categorySlug': 'laptops',
-     'summary': {'minPriceCents': 150000, 'offerCount': 1}},
+     'summary': {'minPriceCents': 150000, 'offerCount': 2}},
     {'id': 'sin-precio', 'name': 'Laptop sin precio', 'brand': 'X', 'categorySlug': 'laptops', 'summary': {}},
     {'id': 'viejo', 'status': 'MERGED', 'mergedInto': 'ps5'},
   ],
@@ -32,6 +32,11 @@ Map<String, dynamic> catalogJson({int ps5Price = 199900}) => {
     {'id': 'COOLBOX__1', 'productId': 'ps5', 'storeCode': 'COOLBOX', 'storeName': 'Coolbox', 'title': 'PS5',
      'productUrl': 'https://x', 'priceCents': ps5Price, 'availability': 'AVAILABLE',
      'lastCheckedAt': '2026-11-24T09:00:00Z', 'lastChangedAt': '2026-11-23T10:00:00Z'},
+    // Dos vendedores del marketplace de Plaza Vea: una sola tienda.
+    for (final n in [1, 2])
+      {'id': 'PLAZAVEA__$n', 'productId': 'lenovo', 'storeCode': 'PLAZAVEA', 'storeName': 'Plaza Vea',
+       'title': 'Lenovo', 'productUrl': 'https://x', 'priceCents': 150000 + n, 'availability': 'AVAILABLE',
+       'lastCheckedAt': '2026-11-24T09:00:00Z'},
   ],
 };
 
@@ -145,5 +150,13 @@ void main() {
       directory: () async => Directory.systemTemp.createTemp('vacio'),
     ));
     expect((await repo.productsPage()).items.single.name, 'Producto en línea');
+  });
+
+  test('cuenta tiendas distintas, no publicaciones', () {
+    final lenovo = catalog.page(limit: 10).items.firstWhere((p) => p.id == 'lenovo');
+    expect(lenovo.summary.offerCount, 2); // dos publicaciones (resumen sin storeCount)
+    expect(lenovo.summary.storeCount, 1);
+    final ps5 = catalog.page(limit: 10).items.firstWhere((p) => p.id == 'ps5');
+    expect(ps5.summary.storeCount, 1);
   });
 }

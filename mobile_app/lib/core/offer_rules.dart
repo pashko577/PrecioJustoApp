@@ -39,7 +39,10 @@ class OfferComparison {
   /// Oferta vigente y disponible más barata.
   final StoreOffer? best;
 
-  /// Oferta vigente y disponible más cara.
+  /// Mejor oferta de la tienda más cara: el precio más bajo que da cada tienda, y de esas
+  /// tiendas la que más cobra. No se usa la oferta más cara a secas: en un marketplace
+  /// algún vendedor siempre pide de más (o publica otro modelo) y el «ahorro» se dispara.
+  /// `null` si solo hay una tienda.
   final StoreOffer? highest;
 
   /// Cuántas ofertas son comparables (vigentes, disponibles y en soles).
@@ -48,9 +51,9 @@ class OfferComparison {
   /// Cuántas tiendas distintas tienen ofertas comparables (una tienda puede tener varios vendedores).
   final int storeCount;
 
-  /// Ahorro máximo entre la oferta más cara y la más barata (solo si hay 2 o más comparables).
+  /// Ahorro frente a comprar en la tienda más cara (solo si hay 2 o más tiendas).
   int? get maxSavingsCents =>
-      comparableCount >= 2 && best != null && highest != null ? highest!.priceCents - best!.priceCents : null;
+      storeCount >= 2 && best != null && highest != null ? highest!.priceCents - best!.priceCents : null;
 }
 
 /// Una oferta es comparable si está vigente, disponible y en soles (RN-01, RN-02, RN-04).
@@ -61,11 +64,17 @@ OfferComparison compareOffers(List<StoreOffer> offers, bool Function(StoreOffer)
   final comparable = offers.where((o) => isComparable(o, fresh)).toList()
     ..sort((a, b) => a.priceCents.compareTo(b.priceCents));
   if (comparable.isEmpty) return const OfferComparison();
+  // Precio más bajo de cada tienda (la lista ya está ordenada: la primera de cada tienda).
+  final cheapestByStore = <String, StoreOffer>{};
+  for (final o in comparable) {
+    cheapestByStore.putIfAbsent(o.storeCode, () => o);
+  }
+  final storeBests = cheapestByStore.values.toList();
   return OfferComparison(
     best: comparable.first,
-    highest: comparable.last,
+    highest: storeBests.length >= 2 ? storeBests.last : null,
     comparableCount: comparable.length,
-    storeCount: comparable.map((o) => o.storeCode).toSet().length,
+    storeCount: storeBests.length,
   );
 }
 

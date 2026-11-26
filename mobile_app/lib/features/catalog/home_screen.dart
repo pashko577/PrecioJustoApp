@@ -327,7 +327,7 @@ class _DropsCarouselState extends ConsumerState<_DropsCarousel> {
                                       ),
                                     ),
                                     Text(
-                                      'en $store${s.offerCount > 1 ? ', comparado en ${s.offerCount} tiendas' : ''}',
+                                      'en $store${s.storeCount > 1 ? ', comparado en ${s.storeCount} tiendas' : ''}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(

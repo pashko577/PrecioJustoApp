@@ -250,7 +250,7 @@ class _SuggestedCard extends ConsumerWidget {
               subtitle: [p.brand, if (p.model != null && p.model!.isNotEmpty) p.model!].join(' · '),
               price: p.summary.minPriceCents == null
                   ? 'Sin precio aún'
-                  : 'Desde ${formatCents(p.summary.minPriceCents!)} en ${p.summary.offerCount} tienda(s)',
+                  : 'Desde ${formatCents(p.summary.minPriceCents!)} en ${p.summary.storeCount} tienda(s)',
             ),
     );
   }

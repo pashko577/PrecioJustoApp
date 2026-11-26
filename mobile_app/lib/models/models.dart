@@ -53,6 +53,7 @@ class PriceSummary {
     this.minPriceCents,
     this.minPriceStoreCode,
     this.offerCount = 0,
+    this.knownStoreCount,
     this.verifiedOfferCount = 0,
     this.lastCheckedAt,
     this.currency = 'PEN',
@@ -63,7 +64,14 @@ class PriceSummary {
 
   final int? minPriceCents;
   final String? minPriceStoreCode;
+  /// Publicaciones activas (una tienda con marketplace puede tener varias del mismo producto).
   final int offerCount;
+
+  /// Tiendas distintas con publicaciones activas (`storeCount` del motor). Los resúmenes
+  /// antiguos no lo traen: entonces se usa `offerCount`.
+  final int? knownStoreCount;
+  int get storeCount => knownStoreCount ?? offerCount;
+
   final int verifiedOfferCount;
   final DateTime? lastCheckedAt;
   final String currency;
@@ -95,6 +103,7 @@ class PriceSummary {
       minPriceCents: _int(d['minPriceCents']),
       minPriceStoreCode: d['minPriceStoreCode'] as String?,
       offerCount: _int(d['offerCount']) ?? 0,
+      knownStoreCount: _int(d['storeCount']),
       verifiedOfferCount: _int(d['verifiedOfferCount']) ?? 0,
       lastCheckedAt: _date(d['lastCheckedAt']),
       currency: d['currency'] as String? ?? 'PEN',

@@ -39,6 +39,27 @@ void main() {
     expect(differenceFromBest(offers[2], c, fresh), isNull); // no comparable
   });
 
+  test('varios vendedores de una tienda: se compara contra el mejor precio de cada tienda', () {
+    final offers = [
+      offer('PLAZAVEA', 23990),
+      offer('PLAZAVEA', 99990), // vendedor que pide de más: no infla el ahorro
+      offer('COOLBOX', 25990),
+      offer('COOLBOX', 26990),
+    ];
+    final c = compareOffers(offers, fresh);
+    expect(c.storeCount, 2);
+    expect(c.comparableCount, 4);
+    expect(c.highest!.priceCents, 25990);
+    expect(c.maxSavingsCents, 2000);
+  });
+
+  test('una sola tienda con varios vendedores: sin ahorro que mostrar', () {
+    final c = compareOffers([offer('PLAZAVEA', 23990), offer('PLAZAVEA', 29990)], fresh);
+    expect(c.storeCount, 1);
+    expect(c.highest, isNull);
+    expect(c.maxSavingsCents, isNull);
+  });
+
   test('con una sola oferta no hay ahorro que mostrar', () {
     final c = compareOffers([offer('COOLBOX', 25990)], fresh);
     expect(c.best!.storeCode, 'COOLBOX');

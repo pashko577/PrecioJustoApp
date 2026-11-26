@@ -99,7 +99,15 @@ def test_summary_uses_only_fresh_available_active_offers():
     assert summary["minPriceCents"] == 30000 and summary["minPriceStoreCode"] == "A"
     assert summary["sortPriceCents"] == 30000
     assert summary["offerCount"] == 3 and summary["verifiedOfferCount"] == 1
+    assert summary["storeCount"] == 3
     assert summary["maxPriceCents"] == 30000
+
+
+def test_summary_counts_distinct_stores_with_marketplace_sellers():
+    stores = {"PLAZAVEA": {"freshnessMinutes": 720}, "COOLBOX": {"freshnessMinutes": 720}}
+    summary = compute_summary([offer("PLAZAVEA", 30000), offer("PLAZAVEA", 31000), offer("PLAZAVEA", 90000),
+                               offer("COOLBOX", 29000)], stores, now=NOW)
+    assert summary["offerCount"] == 4 and summary["storeCount"] == 2
 
 
 def test_summary_respects_store_freshness():

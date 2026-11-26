@@ -241,7 +241,7 @@ class _SearchBodyState extends ConsumerState<_SearchBody> {
         final bestStores = {for (final p in items) if (p.summary.minPriceStoreCode != null) p.summary.minPriceStoreCode!};
         var shown = _stores.isEmpty ? items : items.where((p) => _stores.contains(p.summary.minPriceStoreCode)).toList();
         if (_sort == _Sort.stores) {
-          shown = [...shown]..sort((a, b) => b.summary.offerCount.compareTo(a.summary.offerCount));
+          shown = [...shown]..sort((a, b) => b.summary.storeCount.compareTo(a.summary.storeCount));
         }
 
         return CustomScrollView(

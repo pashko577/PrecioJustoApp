@@ -38,7 +38,7 @@ PROJECT_DAILY_READS_CAP = 47_000
 # Margen ante relojes desfasados y escrituras en curso durante la exportación anterior.
 INCREMENTAL_MARGIN = timedelta(minutes=30)
 SUMMARY_FIELDS = ("minPriceCents", "minPriceStoreCode", "maxPriceCents", "sortPriceCents", "offerCount",
-                  "verifiedOfferCount", "lastCheckedAt", "currency", "priceDropFromCents", "priceDropPercent",
+                  "storeCount", "verifiedOfferCount", "lastCheckedAt", "currency", "priceDropFromCents", "priceDropPercent",
                   "priceDroppedAt")
 
 

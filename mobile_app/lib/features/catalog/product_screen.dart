@@ -93,7 +93,7 @@ class _Body extends StatelessWidget {
               if (list.isNotEmpty) ...[
                 const SizedBox(height: 28),
                 Text(
-                  'Precios en ${list.length} ${list.length == 1 ? 'tienda' : 'tiendas'}',
+                  _pricesTitle(list),
                   style: theme.textTheme.titleMedium?.copyWith(fontSize: 17),
                 ),
                 const SizedBox(height: 12),
@@ -215,6 +215,13 @@ class _RoundButton extends StatelessWidget {
       );
 }
 
+/// «Precios en 4 tiendas», o «Precios en 3 tiendas · 36 ofertas» si hay varios vendedores.
+String _pricesTitle(List<StoreOffer> offers) {
+  final stores = offers.map((o) => o.storeCode).toSet().length;
+  final title = 'Precios en $stores ${stores == 1 ? 'tienda' : 'tiendas'}';
+  return offers.length > stores ? '$title · ${offers.length} ofertas' : title;
+}
+
 /// Barra inferior: alerta de precio e ir a la tienda más barata.
 class _ActionBar extends ConsumerWidget {
   const _ActionBar({required this.product, required this.best});
@@ -241,7 +248,8 @@ class _ActionBar extends ConsumerWidget {
                   foregroundColor: alert == null ? AppColors.ink : AppColors.amberInk,
                 ),
                 icon: Icon(alert == null ? Icons.notifications_none : Icons.notifications_active, size: 20),
-                label: Text(alert == null ? 'Avisarme si baja' : 'Bajo ${formatCents(alert.targetPriceCents)}'),
+                // Corto para que el botón de la tienda muestre su nombre completo en pantallas angostas.
+                label: Text(alert == null ? 'Avisarme' : 'Bajo ${formatCents(alert.targetPriceCents)}'),
                 onPressed: () => openAlertForm(context, ref, product, currentBestCents: best?.priceCents),
               ),
               const SizedBox(width: 10),
